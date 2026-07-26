@@ -1,0 +1,15 @@
+import { Module } from '@nestjs/common';
+import { WebsiteBuilderService } from './website-builder.service';
+import { WebsiteBuilderController } from './website-builder.controller';
+import { EventsModule } from '../events/events.module';
+import { TemplatesModule } from '../events/templates/templates.module';
+import { ThemesModule } from '../events/themes/themes.module';
+import { SectionsModule } from '../events/sections/sections.module';
+import { MembersModule } from '../tenancy/members/members.module';
+
+@Module({
+  imports: [EventsModule, TemplatesModule, ThemesModule, SectionsModule, MembersModule],
+  providers: [WebsiteBuilderService],
+  controllers: [WebsiteBuilderController],
+})
+export class WebsiteBuilderModule {}
