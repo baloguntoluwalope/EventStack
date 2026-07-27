@@ -12,6 +12,12 @@ import { InviteMemberDto } from './dto/invite-member.dto';
 export class MembersController {
   constructor(private membersService: MembersService) {}
 
+  @Get('users/me/memberships')
+  @ApiOperation({ summary: 'List organizations the current user belongs to (accepted memberships only)' })
+  getMyMemberships(@CurrentUser() user: { userId: string }) {
+    return this.membersService.findForUser(user.userId);
+  }
+
   @Post('organizations/:orgId/invitations')
   @ApiOperation({ summary: 'Invite a user to the organization by email' })
   invite(
