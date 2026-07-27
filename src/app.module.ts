@@ -34,6 +34,7 @@ import { MediaModule } from './modules/media/media.module';
 import { SeoModule } from './modules/seo/seo.module';
 import { AnalyticsModule } from './modules/analytics/analytics.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
+import { PlatformDashboardModule } from './modules/platform-dashboard/platform-dashboard.module';
 
 
 @Module({
@@ -65,6 +66,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
     SeoModule,
     AnalyticsModule,
     NotificationsModule,
+    PlatformDashboardModule,
   ],
   providers: [
     { provide: APP_FILTER, useClass: GlobalExceptionFilter },

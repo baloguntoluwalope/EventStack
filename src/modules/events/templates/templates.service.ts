@@ -35,4 +35,8 @@ export class TemplatesService {
   async remove(id: string) {
     return assertDeleted(await this.templateRepo.deleteById(id), 'Template not found');
   }
+
+    countAll() {
+    return this.templateRepo.count();
+  }
 }

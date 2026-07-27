@@ -34,4 +34,8 @@ export class ThemesService {
   async remove(id: string) {
     return assertDeleted(await this.themeRepo.deleteById(id), 'Theme not found');
   }
+
+  countAll() {
+    return this.themeRepo.count();
+  }
 }

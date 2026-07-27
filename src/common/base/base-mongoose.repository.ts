@@ -10,6 +10,7 @@ export interface BaseRepositoryContract<T> {
     filter?: FilterQuery<T>,
     options?: { page?: number; limit?: number },
   ): Promise<T[]>;
+  count(filter?: FilterQuery<T>): Promise<number>;
   updateById(id: string, data: Partial<T>): Promise<T | null>;
   deleteById(id: string): Promise<boolean>;
   findByIdWithDeleted(id: string): Promise<T | null>;
@@ -51,6 +52,10 @@ export abstract class BaseMongooseRepository<T> implements BaseRepositoryContrac
       .skip((page - 1) * limit)
       .limit(limit)
       .exec();
+  }
+
+  count(filter: FilterQuery<T> = {}): Promise<number> {
+    return this.model.countDocuments(this.notDeleted(filter)).exec();
   }
 
   updateById(id: string, data: Partial<T>): Promise<T | null> {

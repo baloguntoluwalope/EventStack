@@ -20,4 +20,6 @@ export class MongooseUserRepository
   findByEmail(email: string) {
     return this.findOne({ email: email.toLowerCase() } as any);
   }
+
+  
 }

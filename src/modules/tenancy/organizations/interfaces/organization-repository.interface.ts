@@ -5,6 +5,7 @@ export interface IOrganizationRepository {
   findById(id: string): Promise<OrganizationDocument | null>;
   updateById(id: string, data: Partial<OrganizationDocument>): Promise<OrganizationDocument | null>;
   deleteById(id: string): Promise<boolean>;
+  count(filter?: Record<string, any>): Promise<number>;
 }
 
 export const ORGANIZATION_REPOSITORY = 'ORGANIZATION_REPOSITORY';

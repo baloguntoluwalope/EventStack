@@ -5,10 +5,17 @@ import { MongooseTemplateRepository } from './repositories/template.repository';
 import { TEMPLATE_REPOSITORY } from './interfaces/template-repository.interface';
 import { TemplatesService } from './templates.service';
 import { TemplatesController } from './templates.controller';
+import { AuthModule } from '../../identity/auth/auth.module';
 
 @Module({
-  imports: [MongooseModule.forFeature([{ name: Template.name, schema: TemplateSchema }])],
-  providers: [{ provide: TEMPLATE_REPOSITORY, useClass: MongooseTemplateRepository }, TemplatesService],
+  imports: [
+    MongooseModule.forFeature([{ name: Template.name, schema: TemplateSchema }]),
+    AuthModule,
+  ],
+  providers: [
+    { provide: TEMPLATE_REPOSITORY, useClass: MongooseTemplateRepository },
+    TemplatesService,
+  ],
   controllers: [TemplatesController],
   exports: [TemplatesService],
 })

@@ -6,6 +6,7 @@ export interface IThemeRepository {
   findMany(filter: Record<string, any>): Promise<ThemeDocument[]>;
   updateById(id: string, data: Partial<ThemeDocument>): Promise<ThemeDocument | null>;
   deleteById(id: string): Promise<boolean>;
+  count(filter?: Record<string, any>): Promise<number>;
 }
 
 export const THEME_REPOSITORY = 'THEME_REPOSITORY';

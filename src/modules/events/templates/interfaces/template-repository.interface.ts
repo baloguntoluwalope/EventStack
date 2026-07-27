@@ -6,6 +6,7 @@ export interface ITemplateRepository {
   findMany(filter: Record<string, any>): Promise<TemplateDocument[]>;
   updateById(id: string, data: Partial<TemplateDocument>): Promise<TemplateDocument | null>;
   deleteById(id: string): Promise<boolean>;
+  count(filter?: Record<string, any>): Promise<number>;
 }
 
 export const TEMPLATE_REPOSITORY = 'TEMPLATE_REPOSITORY';

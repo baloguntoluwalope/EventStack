@@ -5,10 +5,17 @@ import { MongooseThemeRepository } from './repositories/theme.repository';
 import { THEME_REPOSITORY } from './interfaces/theme-repository.interface';
 import { ThemesService } from './themes.service';
 import { ThemesController } from './themes.controller';
+import { AuthModule } from 'src/modules/identity/auth/auth.module';
 
 @Module({
-  imports: [MongooseModule.forFeature([{ name: Theme.name, schema: ThemeSchema }])],
-  providers: [{ provide: THEME_REPOSITORY, useClass: MongooseThemeRepository }, ThemesService],
+  imports: [
+    MongooseModule.forFeature([{ name: Theme.name, schema: ThemeSchema }]),
+    AuthModule,
+  ],
+  providers: [
+    { provide: THEME_REPOSITORY, useClass: MongooseThemeRepository },
+    ThemesService,
+  ],
   controllers: [ThemesController],
   exports: [ThemesService],
 })

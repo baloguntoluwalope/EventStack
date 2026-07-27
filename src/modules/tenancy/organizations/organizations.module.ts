@@ -6,11 +6,13 @@ import { ORGANIZATION_REPOSITORY } from './interfaces/organization-repository.in
 import { OrganizationsService } from './organizations.service';
 import { OrganizationsController } from './organizations.controller';
 import { MembersModule } from '../members/members.module';
+import { AuthModule } from '../../identity/auth/auth.module';
 
 @Module({
   imports: [
     MongooseModule.forFeature([{ name: Organization.name, schema: OrganizationSchema }]),
     forwardRef(() => MembersModule),
+    AuthModule,
   ],
   providers: [
     { provide: ORGANIZATION_REPOSITORY, useClass: MongooseOrganizationRepository },

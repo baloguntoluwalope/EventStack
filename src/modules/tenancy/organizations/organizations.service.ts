@@ -11,6 +11,7 @@ export class OrganizationsService {
     @Inject(ORGANIZATION_REPOSITORY) 
     private readonly orgRepo: IOrganizationRepository,
   ) {}
+
   create(dto: CreateOrganizationDto) {
     return this.orgRepo.create(dto);
   }
@@ -25,5 +26,11 @@ export class OrganizationsService {
 
   async delete(id: string) {
     return assertDeleted(await this.orgRepo.deleteById(id), 'Organization not found');
+  }
+
+  // --- Aggregate Metrics ---
+
+  countAll() {
+    return this.orgRepo.count();
   }
 }

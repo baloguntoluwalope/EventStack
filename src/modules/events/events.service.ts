@@ -1,5 +1,6 @@
 import { Injectable, Inject, BadRequestException } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { Types } from 'mongoose';
 
 // Separate value and type imports to satisfy isolatedModules + emitDecoratorMetadata
 import type { IEventRepository } from './interfaces/event-repository.interface';
@@ -15,9 +16,9 @@ import { EventPublishedDomainEvent } from './events.domain-events';
 @Injectable()
 export class EventsService {
   constructor(
-    @Inject(EVENT_REPOSITORY) private eventRepo: IEventRepository,
-    private slugService: SlugService,
-    private eventEmitter: EventEmitter2,
+    @Inject(EVENT_REPOSITORY) private readonly eventRepo: IEventRepository,
+    private readonly slugService: SlugService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async create(organizationId: string, createdBy: string, dto: CreateEventDto) {
@@ -30,8 +31,8 @@ export class EventsService {
       title: dto.title,
       category: dto.category,
       slug,
-      organizationId: organizationId as any,
-      createdBy: createdBy as any,
+      organizationId: new Types.ObjectId(organizationId) as any,
+      createdBy: new Types.ObjectId(createdBy) as any,
       status: EventStatus.DRAFT,
     });
   }
@@ -103,12 +104,13 @@ export class EventsService {
       original.title,
       async (candidate) => !!(await this.eventRepo.findBySlug(candidate)),
     );
+
     return this.eventRepo.create({
       title: `${original.title} (Copy)`,
       category: original.category,
       slug: newSlug,
-      organizationId: organizationId as any,
-      createdBy: createdBy as any,
+      organizationId: new Types.ObjectId(organizationId) as any,
+      createdBy: new Types.ObjectId(createdBy) as any,
       status: EventStatus.DRAFT,
     });
   }
@@ -118,5 +120,25 @@ export class EventsService {
       await this.eventRepo.deleteByIdForTenant(id, organizationId),
       'Event not found',
     );
+  }
+
+  // --- Aggregations & Metrics ---
+
+  async countByStatus() {
+    const statuses = [
+      EventStatus.DRAFT,
+      EventStatus.PUBLISHED,
+      'ongoing',
+      'completed',
+      EventStatus.ARCHIVED,
+    ];
+
+    const counts = await Promise.all(
+      statuses.map((s) => this.eventRepo.count?.({ status: s } as any)),
+    );
+
+    return Object.fromEntries(
+      statuses.map((s, i) => [s, counts[i] ?? 0]),
+    ) as Record<string, number>;
   }
 }
