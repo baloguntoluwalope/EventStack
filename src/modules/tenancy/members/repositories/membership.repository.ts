@@ -17,4 +17,8 @@ export class MongooseMembershipRepository
   findByOrgAndUser(organizationId: string, userId: string) {
     return this.findOne({ organizationId, userId } as any);
   }
+
+  findByUser(userId: string) {
+    return this.model.find({ userId, status: 'accepted', deletedAt: null }).exec();
+  }
 }

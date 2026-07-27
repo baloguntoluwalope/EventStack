@@ -121,4 +121,8 @@ export class MembersService {
       'Membership not found',
     );
   }
+
+  findForUser(userId: string) {
+    return this.membershipRepo.findByUser(userId);
+  }
 }

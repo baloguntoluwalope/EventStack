@@ -5,6 +5,7 @@ export interface IMembershipRepository {
   findByIdForTenant(id: string, organizationId: string): Promise<MembershipDocument | null>;
   findManyForTenant(organizationId: string): Promise<MembershipDocument[]>;
   findByOrgAndUser(organizationId: string, userId: string): Promise<MembershipDocument | null>;
+  findByUser(userId: string): Promise<MembershipDocument[]>;
   updateById(id: string, data: Partial<MembershipDocument>): Promise<MembershipDocument | null>;
   deleteById(id: string): Promise<boolean>;
 }
