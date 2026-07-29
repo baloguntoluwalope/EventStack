@@ -1,3 +1,4 @@
+// backend/src/main.ts
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, VersioningType } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
@@ -9,8 +10,36 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bufferLogs: true });
   app.useLogger(app.get(Logger));
 
+  // Enable graceful shutdown to release port 4000 on reloads
+  app.enableShutdownHooks();
+
+  // 1. CORS CONFIGURATION
+  const devOrigins = [
+    'http://localhost:3000',
+    'http://localhost:3001',
+    'http://127.0.0.1:3000',
+    'http://127.0.0.1:3001',
+  ];
+
+  const envOrigins = process.env.CORS_ALLOWED_ORIGINS
+    ? process.env.CORS_ALLOWED_ORIGINS.split(',').map((origin) => origin.trim())
+    : [];
+
+  // Merge environment origins with local development defaults
+  const allowedOrigins = Array.from(new Set([...devOrigins, ...envOrigins]));
+
+  app.enableCors({
+    origin: allowedOrigins,
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Cookie', 'X-Requested-With', 'Accept'],
+    optionsSuccessStatus: 204,
+  });
+
+  // 2. HELMET SECURITY HEADERS
   app.use(
     helmet({
+      crossOriginResourcePolicy: { policy: 'cross-origin' }, // Prevents Helmet from overriding CORS headers
       contentSecurityPolicy: {
         directives: {
           defaultSrc: ["'self'"],
@@ -24,18 +53,17 @@ async function bootstrap() {
     }),
   );
 
-  app.enableCors({
-    origin: process.env.CORS_ALLOWED_ORIGINS?.split(',') || ['http://localhost:3000'],
-    credentials: true,
-  });
-
-  // Exclude root SEO endpoints from global /api prefix
+  // 3. GLOBAL ROUTING & API VERSIONING
   app.setGlobalPrefix('api', {
     exclude: ['sitemap.xml', 'robots.txt'],
   });
 
-  app.enableVersioning({ type: VersioningType.URI, defaultVersion: '1' });
+  app.enableVersioning({
+    type: VersioningType.URI,
+    defaultVersion: '1',
+  });
 
+  // 4. GLOBAL VALIDATION PIPE
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -44,6 +72,7 @@ async function bootstrap() {
     }),
   );
 
+  // 5. SWAGGER OPENAPI DOCUMENTATION
   const swaggerConfig = new DocumentBuilder()
     .setTitle('EventStack API')
     .setDescription('Multi-tenant event website creation and management platform')
@@ -54,11 +83,12 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, swaggerConfig);
   SwaggerModule.setup('api/docs', app, document);
 
-  const port = process.env.PORT || 3000;
-  
-  // Explicitly listen on 0.0.0.0 to allow IPv4 connections
+  // 6. SERVER INITIALIZATION
+  const port = process.env.PORT || 4001;
   await app.listen(port, '0.0.0.0');
-  console.log(`🚀 EventStack API running on http://localhost:${port}/api/docs`);
+
+  const logger = app.get(Logger);
+  logger.log(`🚀 EventStack API running on http://localhost:${port}/api/docs`);
 }
 
 bootstrap().catch((err) => {

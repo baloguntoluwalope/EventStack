@@ -1,5 +1,10 @@
 import {
-  ExceptionFilter, Catch, ArgumentsHost, HttpException, HttpStatus, Logger,
+  ExceptionFilter,
+  Catch,
+  ArgumentsHost,
+  HttpException,
+  HttpStatus,
+  Logger,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 
@@ -21,6 +26,11 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     const response = ctx.getResponse<Response>();
     const request = ctx.getRequest<Request>();
 
+    // Safety net: Preflight requests must never return error status codes
+    if (request.method === 'OPTIONS') {
+      return response.sendStatus(204);
+    }
+
     const isHttpException = exception instanceof HttpException;
     const statusCode = isHttpException
       ? exception.getStatus()
@@ -35,7 +45,10 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       : 'InternalServerError';
 
     if (statusCode >= 500) {
-      this.logger.error(`${request.method} ${request.url} — ${message}`, (exception as Error)?.stack);
+      this.logger.error(
+        `${request.method} ${request.url} — ${message}`,
+        (exception as Error)?.stack,
+      );
     }
 
     const body: ErrorResponse = {

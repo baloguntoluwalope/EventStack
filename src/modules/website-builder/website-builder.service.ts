@@ -7,6 +7,7 @@ import { SectionsService } from '../events/sections/sections.service';
 export interface RenderedPage {
   event: {
     id: string;
+    organizationId: string;
     title: string;
     slug: string;
     category: string;
@@ -60,6 +61,7 @@ export class WebsiteBuilderService {
     return {
       event: {
         id: event.id,
+        organizationId: event.organizationId.toString(),
         title: event.title,
         slug: event.slug,
         category: event.category,
@@ -93,6 +95,7 @@ export class WebsiteBuilderService {
     return {
       event: {
         id: event.id,
+        organizationId: event.organizationId.toString(),
         title: event.title,
         slug: event.slug,
         category: event.category,

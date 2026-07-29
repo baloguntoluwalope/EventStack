@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_FILTER, APP_INTERCEPTOR, APP_GUARD } from '@nestjs/core';
-import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { ThrottlerModule } from '@nestjs/throttler';
 
 import configuration from './config/configuration';
 import { validateEnv } from './config/env.validation';
@@ -16,6 +16,7 @@ import { HealthModule } from './infrastructure/health/health.module';
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
 import { AuditInterceptor } from './common/interceptors/audit.interceptor';
+import { CustomThrottlerGuard } from './common/guards/custom-throttler.guard';
 
 import { AuditModule } from './modules/audit/audit.module';
 import { FeatureFlagsModule } from './modules/feature-flags/feature-flags.module';
@@ -35,7 +36,6 @@ import { SeoModule } from './modules/seo/seo.module';
 import { AnalyticsModule } from './modules/analytics/analytics.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { PlatformDashboardModule } from './modules/platform-dashboard/platform-dashboard.module';
-
 
 @Module({
   imports: [
@@ -72,7 +72,7 @@ import { PlatformDashboardModule } from './modules/platform-dashboard/platform-d
     { provide: APP_FILTER, useClass: GlobalExceptionFilter },
     { provide: APP_INTERCEPTOR, useClass: TransformInterceptor },
     { provide: APP_INTERCEPTOR, useClass: AuditInterceptor },
-    { provide: APP_GUARD, useClass: ThrottlerGuard },
+    { provide: APP_GUARD, useClass: CustomThrottlerGuard },
   ],
 })
 export class AppModule {}

@@ -5,22 +5,29 @@ import { RolesGuard } from '../../../common/guards/roles.guard';
 import { Roles } from '../../../common/decorators/roles.decorator';
 import { Role } from '../../../common/constants/roles.constants';
 import { TenantContextGuard } from '../members/guards/tenant-context.guard';
+import { CurrentUser } from '../../../common/decorators/current-user.decorator';
 import { OrganizationsService } from './organizations.service';
+import { MembersService } from '../members/members.service';
 import { CreateOrganizationDto } from './dto/create-organization.dto';
 
 @ApiTags('organizations')
 @ApiBearerAuth()
 @Controller('organizations')
 export class OrganizationsController {
-  constructor(private orgService: OrganizationsService) {}
+  constructor(
+    private orgService: OrganizationsService,
+    private membersService: MembersService,
+  ) {}
 
-  @UseGuards(JwtAuthGuard)
+ @UseGuards(JwtAuthGuard)
   @Post()
-  @ApiOperation({ summary: 'Create a new organization' })
-  create(@Body() dto: CreateOrganizationDto) {
-    return this.orgService.create(dto);
+  @ApiOperation({ summary: 'Create a new organization (creator becomes Owner)' })
+  async create(@CurrentUser() user: { userId: string }, @Body() dto: CreateOrganizationDto) {
+    const org = await this.orgService.create(dto);
+    const membership = await this.membersService.createOwnerMembership(org.id, user.userId);
+    console.log('[OrganizationsController] Created membership:', JSON.stringify(membership));
+    return org;
   }
-
   @UseGuards(JwtAuthGuard, TenantContextGuard)
   @Get(':orgId')
   @ApiOperation({ summary: 'Get organization details (any member)' })

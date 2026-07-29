@@ -18,7 +18,15 @@ export class MongooseMembershipRepository
     return this.findOne({ organizationId, userId } as any);
   }
 
+ 
+
   findByUser(userId: string) {
+    console.log('[MembershipRepository] findByUser called with userId:', userId);
+
+    this.model.find({ userId }).then((all) => {
+      console.log('[MembershipRepository] ALL memberships for this userId (no status/deletedAt filter):', JSON.stringify(all));
+    });
+
     return this.model.find({ userId, status: 'accepted', deletedAt: null }).exec();
   }
 }

@@ -19,8 +19,11 @@ import { EMAIL_PROVIDER } from '../../../common/providers/email-provider.interfa
 import { OrganizationsService } from '../organizations/organizations.service';
 import { InviteMemberDto } from './dto/invite-member.dto';
 import { MembershipStatus } from './schemas/membership.schema';
+import { Role } from '../../../common/constants/roles.constants'; // <-- Directly import Role from roles.constants
 import { assertFound, assertDeleted } from '../../../common/utils/assert-found.util';
-import { renderInvitationEmail } from 'src/modules/identity/email/templates/invitation-email.template';
+
+// Relative path import to maintain consistent TS module resolution
+import { renderInvitationEmail } from '../../identity/email/templates/invitation-email.template';
 
 interface InviteJwtPayload {
   membershipId: string;
@@ -38,6 +41,19 @@ export class MembersService {
     private readonly jwtService: JwtService,
     private readonly config: ConfigService,
   ) {}
+
+  /**
+   * Used only when an organization is created — the creator becomes Owner
+   * immediately, with no invitation/accept step.
+   */
+  createOwnerMembership(organizationId: string, userId: string) {
+    return this.membershipRepo.create({
+      organizationId: new Types.ObjectId(organizationId),
+      userId: new Types.ObjectId(userId),
+      role: Role.OWNER,
+      status: MembershipStatus.ACCEPTED,
+    });
+  }
 
   async invite(organizationId: string, invitedBy: string, dto: InviteMemberDto) {
     const org = await this.orgService.findByIdOrThrow(organizationId);
