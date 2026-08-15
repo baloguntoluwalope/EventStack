@@ -19,6 +19,6 @@ import { AuthModule } from '../../identity/auth/auth.module';
     OrganizationsService,
   ],
   controllers: [OrganizationsController],
-  exports: [ORGANIZATION_REPOSITORY, OrganizationsService],
+  exports: [ORGANIZATION_REPOSITORY, OrganizationsService, OrganizationsModule],
 })
 export class OrganizationsModule {}

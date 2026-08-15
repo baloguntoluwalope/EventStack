@@ -1,4 +1,4 @@
-import { IsEnum, IsObject, IsOptional, IsBoolean } from 'class-validator';
+import { IsEnum, IsObject, IsOptional, IsBoolean, IsNumber } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { SectionType } from '../schemas/section.schema';
 
@@ -8,10 +8,17 @@ export class CreateSectionDto {
   type: SectionType;
 
   @ApiPropertyOptional({ example: { heading: 'Welcome', imageUrl: 'https://...' } })
-  @IsOptional() @IsObject()
+  @IsOptional()
+  @IsObject()
   content?: Record<string, any>;
 
+  @ApiPropertyOptional({ default: 0 })
+  @IsOptional()
+  @IsNumber()
+  order?: number;
+
   @ApiPropertyOptional({ default: true })
-  @IsOptional() @IsBoolean()
+  @IsOptional()
+  @IsBoolean()
   visible?: boolean;
 }

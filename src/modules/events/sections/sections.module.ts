@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { Section, SectionSchema } from './schemas/section.schema';
 import { MongooseSectionRepository } from './repositories/section.repository';
@@ -11,7 +11,7 @@ import { MembersModule } from '../../tenancy/members/members.module';
 @Module({
   imports: [
     MongooseModule.forFeature([{ name: Section.name, schema: SectionSchema }]),
-    EventsModule,
+    forwardRef(() => EventsModule),
     MembersModule,
   ],
   providers: [{ provide: SECTION_REPOSITORY, useClass: MongooseSectionRepository }, SectionsService],

@@ -13,4 +13,12 @@ export class MongooseOrganizationRepository
   constructor(@InjectModel(Organization.name) model: Model<OrganizationDocument>) {
     super(model);
   }
+
+  async softDeleteById(id: string): Promise<boolean> {
+  const result = await this.model.updateOne(
+    { _id: id, deletedAt: null },
+    { deletedAt: new Date() },
+  ).exec();
+  return result.modifiedCount > 0;
+}
 }

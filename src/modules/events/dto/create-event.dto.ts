@@ -1,16 +1,35 @@
-import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString, IsMongoId, IsISO8601, IsEnum } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { EventStatus } from './update-event-seo.dto';
 
 export class CreateEventDto {
   @ApiProperty({ example: 'Annual Harvest Convention' })
-  @IsNotEmpty() @IsString()
-  title: string;
+  @IsNotEmpty()
+  @IsString()
+  title?: string;
 
   @ApiPropertyOptional({ example: 'conference' })
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   category?: string;
 
-  @ApiPropertyOptional({ description: 'Slug is auto-generated from title if omitted' })
-  @IsOptional() @IsString()
+  @ApiPropertyOptional({ example: '2027-03-15T18:00:00.000Z' })
+  @IsOptional()
+  @IsISO8601()
+  eventDate?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
   slug?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsMongoId()
+  templateId?: string;
+
+  @ApiPropertyOptional({ enum: EventStatus, default: EventStatus.DRAFT })
+  @IsOptional()
+  @IsEnum(EventStatus)
+  status?: EventStatus;
 }

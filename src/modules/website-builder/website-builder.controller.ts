@@ -1,4 +1,4 @@
-import { Controller, Get, Param, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Param, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { TenantContextGuard } from '../tenancy/members/guards/tenant-context.guard';
@@ -21,5 +21,13 @@ export class WebsiteBuilderController {
   @ApiOperation({ summary: 'Owner preview render (works on drafts, shows hidden sections)' })
   renderPreview(@Param('orgId') orgId: string, @Param('eventId') eventId: string) {
     return this.websiteBuilderService.renderPreview(orgId, eventId);
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, TenantContextGuard)
+  @Post('organizations/:orgId/events/:eventId/unpublish')
+  @ApiOperation({ summary: 'Unpublish event back to draft mode' })
+  unpublish(@Param('orgId') orgId: string, @Param('eventId') eventId: string) {
+    return this.websiteBuilderService.unpublishEvent(orgId, eventId);
   }
 }

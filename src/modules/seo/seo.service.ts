@@ -44,9 +44,16 @@ export class SeoService {
       event.metaDescription || `Join us for ${event.title}. ${event.category || ''}`.trim();
     const canonicalUrl = `${appUrl}/e/${event.slug}`;
 
-    // Best-effort startDate extraction from countdown section
+    // Prefer the real eventDate field; fall back to countdown section content
+    // for events created before this field existed.
     const countdownSection = sections.find((s) => s.type === 'countdown');
-    const startDate = countdownSection?.content?.targetDate ?? null;
+    const rawEventDate = (event as any).eventDate;
+    const startDate =
+      rawEventDate instanceof Date
+        ? rawEventDate.toISOString()
+        : rawEventDate
+        ? new Date(rawEventDate).toISOString()
+        : countdownSection?.content?.targetDate ?? null;
 
     const schemaOrgJson: Record<string, any> = {
       '@context': 'https://schema.org',

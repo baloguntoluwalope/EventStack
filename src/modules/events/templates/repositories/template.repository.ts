@@ -13,4 +13,8 @@ export class MongooseTemplateRepository
   constructor(@InjectModel(Template.name) model: Model<TemplateDocument>) {
     super(model);
   }
+
+  async findBySlug(slug: string): Promise<TemplateDocument | null> {
+    return this.model.findOne({ slug }).exec();
+  }
 }

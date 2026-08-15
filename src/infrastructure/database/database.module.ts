@@ -9,6 +9,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
         uri: config.get<string>('mongoUri'),
+        readPreference: 'primary',
       }),
     }),
   ],

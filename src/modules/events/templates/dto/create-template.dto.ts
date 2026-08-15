@@ -1,28 +1,69 @@
-import { IsBoolean, IsNotEmpty, IsOptional, IsString, IsArray } from 'class-validator';
+import {
+  IsBoolean,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  IsArray,
+  IsNumber,
+  IsObject,
+  ValidateNested,
+} from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
+
+export class DefaultSectionDto {
+  @ApiProperty({ example: 'hero' })
+  @IsNotEmpty()
+  @IsString()
+  type: string;
+
+  @ApiProperty({ example: 0 })
+  @IsNotEmpty()
+  @IsNumber()
+  order: number;
+
+  @ApiPropertyOptional({ example: { title: 'Welcome' }, default: {} })
+  @IsOptional()
+  @IsObject()
+  content?: Record<string, any> = {};
+}
 
 export class CreateTemplateDto {
   @ApiProperty({ example: 'Grace' })
-  @IsNotEmpty() @IsString()
+  @IsNotEmpty()
+  @IsString()
   name: string;
 
   @ApiProperty({ example: 'grace' })
-  @IsNotEmpty() @IsString()
+  @IsNotEmpty()
+  @IsString()
   slug: string;
 
   @ApiPropertyOptional({ example: 'church' })
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   category?: string;
 
   @ApiPropertyOptional()
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   description?: string;
 
-  @ApiPropertyOptional({ example: [{ type: 'hero', order: 0 }, { type: 'countdown', order: 1 }] })
-  @IsOptional() @IsArray()
-  defaultSections?: { type: string; order: number }[];
+  @ApiPropertyOptional({
+    type: [DefaultSectionDto],
+    example: [
+      { type: 'hero', order: 0, content: {} },
+      { type: 'countdown', order: 1, content: {} },
+    ],
+  })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => DefaultSectionDto)
+  defaultSections?: DefaultSectionDto[];
 
   @ApiPropertyOptional({ default: false })
-  @IsOptional() @IsBoolean()
+  @IsOptional()
+  @IsBoolean()
   isPremium?: boolean;
 }

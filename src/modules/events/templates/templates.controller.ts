@@ -68,4 +68,20 @@ export class TemplatesController {
   remove(@Param('id') id: string) {
     return this.templatesService.remove(id);
   }
+
+  @Get(':id/preview')
+  @ApiOperation({ summary: 'Render a template\'s own default sections (no event required)' })
+  async preview(@Param('id') id: string) {
+    const template = await this.templatesService.findByIdOrThrow(id);
+    return {
+      event: { title: 'Your Event Name' },
+      theme: null, // template has no assigned theme until an event picks one
+      sections: template.defaultSections.map((s, i) => ({
+        id: `preview-${i}`,
+        type: s.type,
+        order: s.order,
+        content: s.content ?? {},
+      })),
+    };
+  }
 }

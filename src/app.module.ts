@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_FILTER, APP_INTERCEPTOR, APP_GUARD } from '@nestjs/core';
 import { ThrottlerModule } from '@nestjs/throttler';
 
@@ -40,7 +40,21 @@ import { PlatformDashboardModule } from './modules/platform-dashboard/platform-d
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true, load: [configuration], validate: validateEnv }),
-    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 100 }]),
+    
+    // Dynamic throttling strategy for Dev vs Prod environments
+    ThrottlerModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => {
+        const isDev = config.get<string>('NODE_ENV') === 'development';
+        return [
+          {
+            ttl: 60_000,
+            limit: isDev ? 1000 : 100, // Elevated limit during local dev
+          },
+        ];
+      },
+    }),
 
     LoggingModule,
     DatabaseModule,

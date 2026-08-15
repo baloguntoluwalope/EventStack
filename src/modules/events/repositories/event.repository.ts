@@ -4,6 +4,7 @@ import { Model } from 'mongoose';
 import { BaseTenantRepository } from '../../../common/base/base-tenant.repository';
 import { Event, EventDocument } from '../schemas/event.schema';
 import { IEventRepository } from '../interfaces/event-repository.interface';
+import { EventStatus } from '../../../common/constants/event-status.constants';
 
 @Injectable()
 export class MongooseEventRepository
@@ -15,14 +16,15 @@ export class MongooseEventRepository
   }
 
   /**
-   * Deliberately global, not tenant-scoped — slugs are unique across the
-   * whole platform (public URL namespace), not per-organization.
+   * Slugs are globally unique across the platform public URL space.
    */
-  findBySlug(slug: string) {
-    return this.findOne({ slug } as any);
+  async findBySlug(slug: string): Promise<EventDocument | null> {
+    return this.findOne({ slug, deletedAt: null });
   }
 
-  findAllPublished() {
-    return this.model.find({ status: 'published', deletedAt: null }).exec();
+  async findAllPublished(): Promise<EventDocument[]> {
+    return this.model
+      .find({ status: EventStatus.PUBLISHED, deletedAt: null })
+      .exec();
   }
 }

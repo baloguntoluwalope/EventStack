@@ -1,15 +1,20 @@
-import { Injectable, Inject } from '@nestjs/common';
+import { Injectable, Inject, forwardRef } from '@nestjs/common';
 import { assertFound, assertDeleted } from '../../../common/utils/assert-found.util';
 import { CreateOrganizationDto } from './dto/create-organization.dto';
 
 import type { IOrganizationRepository } from './interfaces/organization-repository.interface';
 import { ORGANIZATION_REPOSITORY } from './interfaces/organization-repository.interface';
 
+import type { IMembershipRepository } from '../members/interfaces/membership-repository.interface';
+import { MEMBERSHIP_REPOSITORY } from '../members/interfaces/membership-repository.interface';
+
 @Injectable()
 export class OrganizationsService {
   constructor(
-    @Inject(ORGANIZATION_REPOSITORY) 
+    @Inject(ORGANIZATION_REPOSITORY)
     private readonly orgRepo: IOrganizationRepository,
+    @Inject(forwardRef(() => MEMBERSHIP_REPOSITORY))
+    private readonly membershipRepo: IMembershipRepository,
   ) {}
 
   create(dto: CreateOrganizationDto) {
@@ -25,7 +30,16 @@ export class OrganizationsService {
   }
 
   async delete(id: string) {
-    return assertDeleted(await this.orgRepo.deleteById(id), 'Organization not found');
+    const org = assertDeleted(
+      await this.orgRepo.softDeleteById(id),
+      'Organization not found',
+    );
+
+    // Cascade: soft-delete all memberships tied to this org so populate()
+    // never has to resolve a reference to a gone/soft-deleted organization.
+    await this.membershipRepo.softDeleteManyByOrg(id);
+
+    return org;
   }
 
   // --- Aggregate Metrics ---

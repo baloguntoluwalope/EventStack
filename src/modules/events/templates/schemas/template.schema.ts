@@ -3,13 +3,18 @@ import { HydratedDocument } from 'mongoose';
 import { BaseEntity } from '../../../../common/base/base-entity.schema';
 
 @Schema({ _id: false })
-class DefaultSection {
+export class DefaultSection {
   @Prop({ required: true })
   type: string;
 
   @Prop({ required: true })
   order: number;
+
+  @Prop({ type: Object, required: false, default: {} })
+  content?: Record<string, any>;
 }
+
+export const DefaultSectionSchema = SchemaFactory.createForClass(DefaultSection);
 
 @Schema({ timestamps: true })
 export class Template extends BaseEntity {
@@ -20,7 +25,7 @@ export class Template extends BaseEntity {
   slug: string;
 
   @Prop()
-  category: string; // e.g. 'church', 'conference', 'wedding' — matches OrgType loosely, not enforced
+  category: string; // e.g. 'church', 'conference', 'wedding'
 
   @Prop()
   description: string;
@@ -28,7 +33,7 @@ export class Template extends BaseEntity {
   @Prop()
   previewImageUrl: string;
 
-  @Prop({ type: [DefaultSection], default: [] })
+  @Prop({ type: [DefaultSectionSchema], default: [] })
   defaultSections: DefaultSection[];
 
   @Prop({ default: false })
@@ -37,5 +42,6 @@ export class Template extends BaseEntity {
   @Prop({ default: true })
   active: boolean;
 }
+
 export type TemplateDocument = HydratedDocument<Template>;
 export const TemplateSchema = SchemaFactory.createForClass(Template);

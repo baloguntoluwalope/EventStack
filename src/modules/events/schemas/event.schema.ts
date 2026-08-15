@@ -17,34 +17,36 @@ export class Event extends BaseEntity {
   @Prop()
   category: string;
 
-  @Prop({ enum: EventStatus, default: EventStatus.DRAFT })
+  @Prop({ type: String, enum: EventStatus, default: EventStatus.DRAFT })
   status: EventStatus;
 
   @Prop({ type: Types.ObjectId, ref: 'Template' })
-  templateId: Types.ObjectId;
+  templateId?: Types.ObjectId;
 
   @Prop({ type: Types.ObjectId, ref: 'Theme' })
-  themeId: Types.ObjectId;
+  themeId?: Types.ObjectId;
 
   @Prop()
-  qrCodeUrl: string;
+  qrCodeUrl?: string;
 
   @Prop()
-  publishedAt: Date;
+  publishedAt?: Date;
 
   @Prop({ type: Types.ObjectId, ref: 'User' })
   createdBy: Types.ObjectId;
 
+  @Prop()
+  metaTitle?: string;
 
   @Prop()
-  metaTitle: string;
+  metaDescription?: string;
 
   @Prop()
-  metaDescription: string;
+  ogImageUrl?: string;
 
   @Prop()
-  ogImageUrl: string;
-
+  eventDate: Date;
 }
+
 export type EventDocument = HydratedDocument<Event>;
 export const EventSchema = SchemaFactory.createForClass(Event);

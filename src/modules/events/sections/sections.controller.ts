@@ -11,12 +11,12 @@ import { CreateSectionDto } from './dto/create-section.dto';
 @ApiTags('sections')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, TenantContextGuard, PermissionsGuard)
-@Controller()
+@Controller('organizations/:orgId/events/:eventId/sections')
 export class SectionsController {
   constructor(private sectionsService: SectionsService) {}
 
   @RequirePermission(Permission.EVENT_EDIT)
-  @Post('organizations/:orgId/events/:eventId/sections')
+  @Post()
   @ApiOperation({ summary: 'Add a section to an event' })
   create(
     @Param('orgId') orgId: string,
@@ -26,21 +26,14 @@ export class SectionsController {
     return this.sectionsService.create(orgId, eventId, dto);
   }
 
-  @Get('organizations/:orgId/events/:eventId/sections')
+  @Get()
   @ApiOperation({ summary: 'List sections for an event in order' })
   list(@Param('orgId') orgId: string, @Param('eventId') eventId: string) {
     return this.sectionsService.listForEvent(orgId, eventId);
   }
 
   @RequirePermission(Permission.EVENT_EDIT)
-  @Patch('organizations/:orgId/sections/:id')
-  @ApiOperation({ summary: 'Update section content/visibility' })
-  update(@Param('orgId') orgId: string, @Param('id') id: string, @Body() dto: Partial<CreateSectionDto>) {
-    return this.sectionsService.update(orgId, id, dto);
-  }
-
-  @RequirePermission(Permission.EVENT_EDIT)
-  @Patch('organizations/:orgId/events/:eventId/sections/reorder')
+  @Patch('reorder')
   @ApiOperation({ summary: 'Reorder sections' })
   reorder(
     @Param('orgId') orgId: string,
@@ -51,9 +44,27 @@ export class SectionsController {
   }
 
   @RequirePermission(Permission.EVENT_EDIT)
-  @Delete('organizations/:orgId/sections/:id')
+  @Patch(':id')
+  @ApiOperation({ summary: 'Update section content/visibility' })
+  update(
+    @Param('orgId') orgId: string,
+    @Param('eventId') eventId: string,
+    @Param('id') id: string,
+    @Body() dto: Partial<CreateSectionDto>,
+  ) {
+    // ✅ FIX: Pass `eventId` as the second argument
+    return this.sectionsService.update(orgId, eventId, id, dto);
+  }
+
+  @RequirePermission(Permission.EVENT_EDIT)
+  @Delete(':id')
   @ApiOperation({ summary: 'Remove a section' })
-  remove(@Param('orgId') orgId: string, @Param('id') id: string) {
-    return this.sectionsService.remove(orgId, id);
+  remove(
+    @Param('orgId') orgId: string,
+    @Param('eventId') eventId: string,
+    @Param('id') id: string,
+  ) {
+    // ✅ FIX: Pass `eventId` here as well if remove() accepts it
+    return this.sectionsService.remove(orgId, eventId, id);
   }
 }

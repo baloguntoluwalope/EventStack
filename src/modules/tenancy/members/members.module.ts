@@ -23,6 +23,6 @@ import { OrganizationsModule } from '../organizations/organizations.module';
     TenantContextGuard,
   ],
   controllers: [MembersController],
-  exports: [MembersService, TenantContextGuard],
+  exports: [MEMBERSHIP_REPOSITORY, MembersService, TenantContextGuard],
 })
 export class MembersModule {}
