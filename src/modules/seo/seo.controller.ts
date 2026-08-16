@@ -40,17 +40,15 @@ export class SeoController {
     return this.seoService.generateForPublishedEvent(slug, this.baseUrl);
   }
 
-  @ApiBearerAuth()
+@ApiBearerAuth()
   @UseGuards(JwtAuthGuard, TenantContextGuard, PermissionsGuard)
   @RequirePermission(Permission.EVENT_EDIT)
-  @Patch('organizations/:orgId/events/:id/seo')
-  @ApiOperation({ summary: 'Override SEO meta title/description/OG image for an event' })
-  updateSeo(
-    @Param('orgId') orgId: string,
-    @Param('id') id: string,
-    @Body() dto: UpdateEventSeoDto,
-  ) {
-    return this.eventsService.updateSeoFields(id, orgId, dto);
+  @Get('organizations/:orgId/events/:id/seo')
+  @ApiOperation({ summary: 'Get current SEO overrides for an event (organizer view)' })
+  getEventSeo(@Param('orgId') orgId: string, @Param('id') id: string) {
+    return this.eventsService.findByIdForTenantOrThrow(id, orgId).then((e) => ({
+      metaTitle: e['metaTitle'], metaDescription: e['metaDescription'], ogImageUrl: e['ogImageUrl'],
+    }));
   }
 
   @Version(VERSION_NEUTRAL)

@@ -6,6 +6,8 @@ import { ThrottlerModule } from '@nestjs/throttler';
 import configuration from './config/configuration';
 import { validateEnv } from './config/env.validation';
 
+import { AppController } from './app.controller';
+
 import { DatabaseModule } from './infrastructure/database/database.module';
 import { LoggingModule } from './infrastructure/logging/logging.module';
 import { CacheModule } from './infrastructure/cache/cache.module';
@@ -40,7 +42,7 @@ import { PlatformDashboardModule } from './modules/platform-dashboard/platform-d
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true, load: [configuration], validate: validateEnv }),
-    
+
     // Dynamic throttling strategy for Dev vs Prod environments
     ThrottlerModule.forRootAsync({
       imports: [ConfigModule],
@@ -82,6 +84,7 @@ import { PlatformDashboardModule } from './modules/platform-dashboard/platform-d
     NotificationsModule,
     PlatformDashboardModule,
   ],
+  controllers: [AppController],
   providers: [
     { provide: APP_FILTER, useClass: GlobalExceptionFilter },
     { provide: APP_INTERCEPTOR, useClass: TransformInterceptor },

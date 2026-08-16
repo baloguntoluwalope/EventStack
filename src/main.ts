@@ -10,7 +10,7 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bufferLogs: true });
   app.useLogger(app.get(Logger));
 
-  // Enable graceful shutdown to release port 4000 on reloads
+  // Enable graceful shutdown to release ports cleanly on process signals
   app.enableShutdownHooks();
 
   // 1. CORS CONFIGURATION
@@ -54,8 +54,9 @@ async function bootstrap() {
   );
 
   // 3. GLOBAL ROUTING & API VERSIONING
+  // Exclude '/' so Pxxl / health-check proxies hit AppController directly on GET /
   app.setGlobalPrefix('api', {
-    exclude: ['sitemap.xml', 'robots.txt'],
+    exclude: ['/', 'sitemap.xml', 'robots.txt'],
   });
 
   app.enableVersioning({
@@ -88,7 +89,7 @@ async function bootstrap() {
   await app.listen(port, '0.0.0.0');
 
   const logger = app.get(Logger);
-  logger.log(`🚀 EventStack API running on http://localhost:${port}/api/docs`);
+  logger.log(`🚀 EventStack API running on port ${port}`);
 }
 
 bootstrap().catch((err) => {
