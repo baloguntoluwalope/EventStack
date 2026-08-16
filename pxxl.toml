@@ -1,6 +1,5 @@
 [build]
-builder = "npm"
-build_command = "npm run build"
+command = "npm install && npm run build"
 
 [deploy]
 start_command = "npm run start:prod"
