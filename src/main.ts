@@ -19,7 +19,7 @@ async function bootstrap() {
     'http://localhost:3001',
     'http://127.0.0.1:3000',
     'http://127.0.0.1:3001',
-    'https://event-stack-frontend-173m.vercel.app/',
+    'https://event-stack-frontend-173m.vercel.app',
   ];
 
   const envOrigins = process.env.CORS_ALLOWED_ORIGINS
@@ -54,15 +54,11 @@ async function bootstrap() {
     }),
   );
 
-  // 3. GLOBAL ROUTING & API VERSIONING
-  // Exclude '/' so Pxxl / health-check proxies hit AppController directly on GET /
+  // 3. GLOBAL ROUTING
+  // Keep the public health and status routes outside the API prefix so
+  // deployment/proxy readiness checks and unversioned client paths succeed.
   app.setGlobalPrefix('api', {
-    exclude: ['/', 'sitemap.xml', 'robots.txt'],
-  });
-
-  app.enableVersioning({
-    type: VersioningType.URI,
-    defaultVersion: '1',
+    exclude: ['/', 'health', 'health-check', 'sitemap.xml', 'robots.txt'],
   });
 
   // 4. GLOBAL VALIDATION PIPE

@@ -2,11 +2,16 @@
  * Single typed source of configuration access. Modules inject
  * ConfigService and read through here — never process.env directly.
  */
+const normalizeBaseUrl = (value?: string) =>
+  (value ?? '').split(',').map((entry) => entry.trim().replace(/\/$/, '')).find((entry) => entry && !entry.includes('localhost')) ||
+  (value ?? '').split(',').map((entry) => entry.trim().replace(/\/$/, '')).find(Boolean) ||
+  'http://localhost:3000';
+
 export default () => ({
   nodeEnv: process.env.NODE_ENV || 'development',
   port: parseInt(process.env.PORT || '', 10) || 3000,
   appName: 'EventStack',
-  appUrl: process.env.APP_URL || 'http://localhost:3000',
+  appUrl: normalizeBaseUrl(process.env.APP_URL),
 
   mongoUri: process.env.MONGO_URI,
 
@@ -18,7 +23,10 @@ export default () => ({
   },
 
   cors: {
-    allowedOrigins: (process.env.CORS_ALLOWED_ORIGINS || 'http://localhost:3000').split(','),
+    allowedOrigins: (process.env.CORS_ALLOWED_ORIGINS || 'http://localhost:3000')
+      .split(',')
+      .map((origin) => origin.trim().replace(/\/$/, ''))
+      .filter(Boolean),
   },
 
 rateLimit: {

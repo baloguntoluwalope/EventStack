@@ -10,4 +10,13 @@ export class AppController {
       timestamp: new Date().toISOString(),
     };
   }
+
+  @Get('health-check')
+  getHealthCheck() {
+    return {
+      status: 'ok',
+      service: 'EventStack API',
+      timestamp: new Date().toISOString(),
+    };
+  }
 }
