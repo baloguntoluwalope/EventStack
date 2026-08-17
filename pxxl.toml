@@ -2,4 +2,4 @@
 command = "npm run build"
 
 [deploy]
-start_command = "PORT=${PORT:-3000} node main.js"
+start_command = "PORT=${PORT:-3000} node dist/src/main.js"
