@@ -97,22 +97,49 @@ export class EventsService {
       return;
     }
 
-    const sectionsToCreate = template.defaultSections.map((defaultSection: any, index: number) => {
-      const content = { ...(defaultSection.defaultContent ?? defaultSection.content ?? {}) };
+    const supportedTypes = new Set([
+      'hero',
+      'about',
+      'countdown',
+      'programme',
+      'speakers',
+      'committee',
+      'gallery',
+      'venue',
+      'donation',
+      'livestream',
+      'contact',
+      'faq',
+      'sponsors',
+      'footer',
+      'testimonials',
+    ]);
 
-      if (defaultSection.type === 'hero' && eventTitle) {
-        content.heading = eventTitle;
-      }
+    const sectionsToCreate = template.defaultSections
+      .filter((defaultSection: any) => {
+        const type = String(defaultSection.type ?? '').trim();
+        return type && supportedTypes.has(type);
+      })
+      .map((defaultSection: any, index: number) => {
+        const content = { ...(defaultSection.defaultContent ?? defaultSection.content ?? {}) };
 
-      return {
-        organizationId,
-        eventId,
-        type: defaultSection.type,
-        content,
-        order: index,
-        visible: defaultSection.visible ?? true,
-      };
-    });
+        if (defaultSection.type === 'hero' && eventTitle) {
+          content.heading = eventTitle;
+        }
+
+        return {
+          organizationId,
+          eventId,
+          type: defaultSection.type,
+          content,
+          order: index,
+          visible: defaultSection.visible ?? true,
+        };
+      });
+
+    if (sectionsToCreate.length === 0) {
+      return;
+    }
 
     // Check if sectionsService exposes bulk creation or fallback to sequential batching
     if (typeof (this.sectionsService as any).createMany === 'function') {

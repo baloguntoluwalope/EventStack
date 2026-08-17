@@ -2,10 +2,14 @@
  * Single typed source of configuration access. Modules inject
  * ConfigService and read through here — never process.env directly.
  */
-const normalizeBaseUrl = (value?: string) =>
-  (value ?? '').split(',').map((entry) => entry.trim().replace(/\/$/, '')).find((entry) => entry && !entry.includes('localhost')) ||
-  (value ?? '').split(',').map((entry) => entry.trim().replace(/\/$/, '')).find(Boolean) ||
-  'http://localhost:3000';
+const normalizeBaseUrl = (value?: string) => {
+  const candidates = (value ?? '')
+    .split(',')
+    .map((entry) => entry.trim().replace(/\/$/, ''))
+    .filter(Boolean);
+
+  return candidates.find((entry) => !entry.includes('localhost')) || candidates[0] || 'https://event-stack-frontend-173m.vercel.app';
+};
 
 export default () => ({
   nodeEnv: process.env.NODE_ENV || 'development',

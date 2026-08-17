@@ -6,7 +6,7 @@ export class CreateEventDto {
   @ApiProperty({ example: 'Annual Harvest Convention' })
   @IsNotEmpty()
   @IsString()
-  title?: string;
+  title: string; // Removed optional '?' because @IsNotEmpty() requires it
 
   @ApiPropertyOptional({ example: 'conference' })
   @IsOptional()
@@ -25,7 +25,7 @@ export class CreateEventDto {
 
   @ApiPropertyOptional()
   @IsOptional()
-  @IsMongoId()
+  @IsString() // Changed from @IsMongoId() if templateId can be a string slug/identifier
   templateId?: string;
 
   @ApiPropertyOptional({ enum: EventStatus, default: EventStatus.DRAFT })

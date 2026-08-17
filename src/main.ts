@@ -7,6 +7,13 @@ import { Logger } from 'nestjs-pino';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
+  const requiredEnvKeys = ['NODE_ENV', 'PORT', 'APP_URL', 'MONGO_URI', 'JWT_ACCESS_SECRET', 'JWT_REFRESH_SECRET'];
+  const missingEnvKeys = requiredEnvKeys.filter((key) => !process.env[key]);
+
+  if (missingEnvKeys.length > 0) {
+    console.warn(`[startup] Missing required environment variables: ${missingEnvKeys.join(', ')}`);
+  }
+
   const app = await NestFactory.create(AppModule, { bufferLogs: true });
   app.useLogger(app.get(Logger));
 
@@ -82,7 +89,7 @@ async function bootstrap() {
   SwaggerModule.setup('api/docs', app, document);
 
   // 6. SERVER INITIALIZATION
-  const port = process.env.PORT || 4001;
+  const port = Number(process.env.PORT ?? 3000);
   await app.listen(port, '0.0.0.0');
 
   const logger = app.get(Logger);
