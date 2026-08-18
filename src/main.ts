@@ -61,11 +61,17 @@ async function bootstrap() {
     }),
   );
 
-  // 3. GLOBAL ROUTING
+  // 3. GLOBAL ROUTING + VERSIONING
   // Keep the public health and status routes outside the API prefix so
   // deployment/proxy readiness checks and unversioned client paths succeed.
   app.setGlobalPrefix('api', {
     exclude: ['/', 'health', 'health-check', 'sitemap.xml', 'robots.txt'],
+  });
+
+  app.enableVersioning({
+    type: VersioningType.URI,
+    defaultVersion: '1',
+    prefix: 'v',
   });
 
   // 4. GLOBAL VALIDATION PIPE
