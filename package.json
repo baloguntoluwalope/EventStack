@@ -11,7 +11,6 @@
     "start": "nest start",
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
-    "prestart:prod": "npm run build",
     "start:prod": "node dist/src/main.js",
     "admin": "ts-node -r tsconfig-paths/register src/modules/scripts/manage-platform-admin.script.ts",
     "cleanup:orphaned-memberships": "ts-node -r tsconfig-paths/register src/modules/scripts/cleanup-orphan-memberships.ts",
