@@ -155,7 +155,18 @@ export class MongooseTournamentRepository
   // FIND BY ID PUBLIC
   // =========================================================
 
-  findByIdPublic(id: string) {
-    return this.findById(id);
+ async findByIdPublic(
+  id: string,
+): Promise<TournamentDocument | null> {
+  if (!id || !Types.ObjectId.isValid(id)) {
+    return null;
   }
+
+  return this.tournamentModel
+    .findOne({
+      _id: new Types.ObjectId(id),
+      deletedAt: null,
+    })
+    .exec();
+}
 }

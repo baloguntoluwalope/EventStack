@@ -371,16 +371,25 @@ private readonly eventRepo: IEventRepository,
     );
   }
 
-  // =========================================================
-  // PUBLIC
-  // =========================================================
+ 
+// =========================================================
+// PUBLIC TOURNAMENTS FOR EVENT
+// =========================================================
 
- async findByIdPublicOrThrow(
+// =========================================================
+// PUBLIC
+// =========================================================
+
+async findByIdPublicOrThrow(
   id: string,
 ) {
+  const objectId = this.toObjectId(id);
+
   const tournament =
     await assertFound(
-      await this.tournamentRepo.findByIdPublic(id),
+      await this.tournamentRepo.findByIdPublic(
+        objectId.toString(),
+      ),
       'Tournament not found',
     );
 
@@ -395,38 +404,90 @@ private readonly eventRepo: IEventRepository,
 // PUBLIC TOURNAMENTS FOR EVENT
 // =========================================================
 
-
 async listPublicForEvent(
   eventId: string,
 ) {
   if (!eventId) {
-    return [];
+    throw new BadRequestException(
+      'Event ID is required.',
+    );
   }
 
+  /**
+   * Validate the Event ID before querying MongoDB.
+   */
+  this.toObjectId(eventId);
+
+  /**
+   * First verify that THIS EXACT EVENT exists
+   * and is publicly visible.
+   *
+   * Do not resolve a tournament by treating
+   * eventId as a tournamentId.
+   */
   await this.assertEventIsPublished(
     eventId,
   );
 
-  return this.tournamentRepo.findByEventPublic(
-    eventId,
+  /**
+   * Now resolve tournaments that actually belong
+   * to this event.
+   */
+  const tournaments =
+    await this.tournamentRepo.findByEventPublic(
+      eventId,
+    );
+
+  if (!tournaments) {
+    return [];
+  }
+
+  /**
+   * Extra protection:
+   *
+   * Never accidentally expose a tournament
+   * belonging to another event.
+   */
+  return tournaments.filter(
+    (tournament: any) =>
+      String(
+        tournament.eventId,
+      ) === String(eventId),
   );
 }
+
 // =========================================================
-// PUBLIC TOURNAMENT VISIBILITY
+// PUBLIC EVENT VISIBILITY
 // =========================================================
 
 private async assertEventIsPublished(
   eventId: string,
 ) {
+  if (!eventId) {
+    throw new BadRequestException(
+      'Event ID is required.',
+    );
+  }
+
+  this.toObjectId(eventId);
+
   const event =
-    await this.eventRepo.findById(eventId);
+    await this.eventRepo.findById(
+      eventId,
+    );
+
+  if (!event) {
+    throw new NotFoundException(
+      'Event not found',
+    );
+  }
 
   if (
-    !event ||
-    event.status !== EventStatus.PUBLISHED
+    event.status !==
+    EventStatus.PUBLISHED
   ) {
     throw new NotFoundException(
-      'Tournament not found',
+      'Event not found',
     );
   }
 

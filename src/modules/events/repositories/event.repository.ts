@@ -74,21 +74,54 @@ export class MongooseEventRepository
   }
 
 
-  async findById(
+ async findById(
   id: string,
 ): Promise<EventDocument | null> {
   if (!id || !Types.ObjectId.isValid(id)) {
+    console.log(
+      '[EventRepository] Invalid event ID:',
+      id,
+    );
+
     return null;
   }
 
-  return this.model
+  const objectId = new Types.ObjectId(id);
+
+  console.log(
+    '[EventRepository] Public event lookup:',
+    {
+      id,
+      objectId: objectId.toString(),
+      database: this.model.db.name,
+      collection: this.model.collection.name,
+    },
+  );
+
+  const event = await this.model
     .findOne({
-      _id: new Types.ObjectId(id),
+      _id: objectId,
       deletedAt: null,
     })
     .exec();
-}
 
+  console.log(
+    '[EventRepository] Public event result:',
+    event
+      ? {
+          id: String(event._id),
+          organizationId: String(
+            event.organizationId,
+          ),
+          status: event.status,
+          deletedAt: event.deletedAt,
+          slug: event.slug,
+        }
+      : null,
+  );
+
+  return event;
+}
   async findAllPublished(): Promise<EventDocument[]> {
     return this.model
       .find({
