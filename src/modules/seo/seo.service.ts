@@ -23,8 +23,12 @@ export class SeoService {
     return url.replace(/\/+$/, '');
   }
 
-  async generateForPublishedEvent(slug: string, rawAppUrl: string): Promise<SeoPayload> {
-    const appUrl = this.cleanUrl(rawAppUrl);
+  async getPublicEventSeo(
+    slug: string,
+    pageSlug?: string,
+    rawAppUrl: string = '',
+  ): Promise<SeoPayload> {
+    const appUrl = rawAppUrl ? this.cleanUrl(rawAppUrl) : '';
     const event = await this.eventsService.findPublishedBySlug(slug);
 
     const organizationId =
@@ -42,7 +46,7 @@ export class SeoService {
     const metaTitle = event.metaTitle || event.title;
     const metaDescription =
       event.metaDescription || `Join us for ${event.title}. ${event.category || ''}`.trim();
-    const canonicalUrl = `${appUrl}/e/${event.slug}`;
+    const canonicalUrl = `${appUrl}/e/${event.slug}${pageSlug ? `/${pageSlug}` : ''}`;
 
     // Prefer the real eventDate field; fall back to countdown section content
     // for events created before this field existed.

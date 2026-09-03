@@ -5,6 +5,7 @@ import {
   Header,
   Param,
   Patch,
+  Query,
   UseGuards,
   Version,
   VERSION_NEUTRAL,
@@ -36,11 +37,11 @@ export class SeoController {
 
   @Get('e/:slug/seo')
   @ApiOperation({ summary: 'Meta tags + schema.org JSON-LD for a published event page (public)' })
-  getSeo(@Param('slug') slug: string) {
-    return this.seoService.generateForPublishedEvent(slug, this.baseUrl);
+  getSeo(@Param('slug') slug: string, @Query('page') pageSlug?: string) {
+    return this.seoService.getPublicEventSeo(slug, pageSlug, this.baseUrl);
   }
 
-@ApiBearerAuth()
+  @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, TenantContextGuard, PermissionsGuard)
   @RequirePermission(Permission.EVENT_EDIT)
   @Get('organizations/:orgId/events/:id/seo')

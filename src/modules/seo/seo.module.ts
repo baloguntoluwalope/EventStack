@@ -9,5 +9,6 @@ import { MembersModule } from '../tenancy/members/members.module';
   imports: [EventsModule, SectionsModule, MembersModule],
   providers: [SeoService],
   controllers: [SeoController],
+  exports: [SeoService],
 })
 export class SeoModule {}

@@ -1,73 +1,279 @@
-import { Injectable } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
-import { BaseTenantRepository } from '../../../../common/base/base-tenant.repository';
-import { Section, SectionDocument } from '../schemas/section.schema';
-import { ISectionRepository } from '../interfaces/section-repository.interface';
+import {
+  Injectable,
+} from '@nestjs/common';
+
+import {
+  InjectModel,
+} from '@nestjs/mongoose';
+
+import {
+  Model,
+  Types,
+} from 'mongoose';
+
+import {
+  BaseTenantRepository,
+} from '../../../../common/base/base-tenant.repository';
+
+import {
+  Section,
+  SectionDocument,
+} from '../schemas/section.schema';
+
+import {
+  ISectionRepository,
+} from '../interfaces/section-repository.interface';
 
 @Injectable()
 export class MongooseSectionRepository
   extends BaseTenantRepository<SectionDocument>
   implements ISectionRepository
 {
-  constructor(@InjectModel(Section.name) private readonly sectionModel: Model<SectionDocument>) {
+  constructor(
+    @InjectModel(Section.name)
+    private readonly sectionModel:
+      Model<SectionDocument>,
+  ) {
     super(sectionModel);
   }
 
-  /**
-   * Finds a section explicitly scoped to both tenant organization AND parent event.
-   */
+  // =========================================================
+  // FIND BY ID + TENANT + EVENT
+  // =========================================================
+
   async findByIdForTenantAndEvent(
     id: string,
     organizationId: string,
     eventId: string,
   ): Promise<SectionDocument | null> {
+    if (
+      !Types.ObjectId.isValid(id) ||
+      !Types.ObjectId.isValid(
+        organizationId,
+      ) ||
+      !Types.ObjectId.isValid(eventId)
+    ) {
+      return null;
+    }
+
     return this.sectionModel
       .findOne({
-        _id: new Types.ObjectId(id),
-        organizationId: new Types.ObjectId(organizationId),
-        eventId: new Types.ObjectId(eventId),
+        _id:
+          new Types.ObjectId(id),
+
+        organizationId:
+          new Types.ObjectId(
+            organizationId,
+          ),
+
+        eventId:
+          new Types.ObjectId(
+            eventId,
+          ),
+
         deletedAt: null,
       })
       .exec();
   }
 
-  async findByEvent(eventId: string): Promise<SectionDocument[]> {
+  // =========================================================
+  // FIND ALL FOR EVENT + TENANT
+  // =========================================================
+
+  async findByEvent(
+    eventId: string,
+    organizationId: string,
+  ): Promise<SectionDocument[]> {
+    if (
+      !Types.ObjectId.isValid(eventId) ||
+      !Types.ObjectId.isValid(
+        organizationId,
+      )
+    ) {
+      return [];
+    }
+
     return this.sectionModel
       .find({
-        eventId: new Types.ObjectId(eventId),
+        eventId:
+          new Types.ObjectId(
+            eventId,
+          ),
+
+        organizationId:
+          new Types.ObjectId(
+            organizationId,
+          ),
+
         deletedAt: null,
       })
-      .sort({ order: 1 })
+      .sort({
+        order: 1,
+      })
       .exec();
   }
 
-  async createMany(sections: Record<string, any>[]): Promise<SectionDocument[]> {
-    const preparedSections = sections.map((sec) => ({
-      ...sec,
-      organizationId: new Types.ObjectId(sec.organizationId),
-      eventId: new Types.ObjectId(sec.eventId),
-    }));
+  // =========================================================
+  // CREATE MANY
+  // =========================================================
 
-    return this.sectionModel.insertMany(preparedSections) as unknown as SectionDocument[];
+  async createMany(
+    sections: Record<string, any>[],
+  ): Promise<SectionDocument[]> {
+    const preparedSections =
+      sections.map((section) => ({
+        ...section,
+
+        organizationId:
+          new Types.ObjectId(
+            section.organizationId,
+          ),
+
+        eventId:
+          new Types.ObjectId(
+            section.eventId,
+          ),
+
+        pageId:
+          section.pageId
+            ? new Types.ObjectId(
+                section.pageId,
+              )
+            : null,
+
+        deletedAt:
+          null,
+
+        version:
+          0,
+      }));
+
+    return this.sectionModel.insertMany(
+      preparedSections,
+    ) as unknown as SectionDocument[];
   }
 
-  async reorder(eventId: string, orderedIds: string[]): Promise<void> {
-    const validEventId = new Types.ObjectId(eventId);
+  // =========================================================
+  // UPDATE
+  // =========================================================
 
-    const bulkOps = orderedIds.map((id, index) => ({
-      updateOne: {
-        filter: {
-          _id: new Types.ObjectId(id),
-          eventId: validEventId,
+  async updateById(
+    id: string,
+    data: Record<string, any>,
+  ): Promise<SectionDocument | null> {
+    if (
+      !Types.ObjectId.isValid(id)
+    ) {
+      return null;
+    }
+
+    const updateData = {
+      ...data,
+    };
+
+    if (
+      updateData.pageId !== undefined
+    ) {
+      updateData.pageId =
+        updateData.pageId
+          ? new Types.ObjectId(
+              updateData.pageId,
+            )
+          : null;
+    }
+
+    return this.sectionModel
+      .findOneAndUpdate(
+        {
+          _id:
+            new Types.ObjectId(id),
+
           deletedAt: null,
         },
-        update: { $set: { order: index } },
-      },
-    }));
+        {
+          $set: updateData,
 
-    if (bulkOps.length > 0) {
-      await this.sectionModel.bulkWrite(bulkOps);
+          $inc: {
+            version: 1,
+          },
+        },
+        {
+          new: true,
+        },
+      )
+      .exec();
+  }
+
+  // =========================================================
+  // REORDER
+  // =========================================================
+
+  async reorder(
+    organizationId: string,
+    eventId: string,
+    orderedIds: string[],
+  ): Promise<void> {
+    if (
+      !Types.ObjectId.isValid(
+        organizationId,
+      ) ||
+      !Types.ObjectId.isValid(
+        eventId,
+      )
+    ) {
+      return;
     }
+
+    const validOrganizationId =
+      new Types.ObjectId(
+        organizationId,
+      );
+
+    const validEventId =
+      new Types.ObjectId(
+        eventId,
+      );
+
+    const bulkOps =
+      orderedIds
+        .filter((id) =>
+          Types.ObjectId.isValid(id),
+        )
+        .map((id, index) => ({
+          updateOne: {
+            filter: {
+              _id:
+                new Types.ObjectId(id),
+
+              organizationId:
+                validOrganizationId,
+
+              eventId:
+                validEventId,
+
+              deletedAt: null,
+            },
+
+            update: {
+              $set: {
+                order: index,
+              },
+
+              $inc: {
+                version: 1,
+              },
+            },
+          },
+        }));
+
+    if (
+      bulkOps.length === 0
+    ) {
+      return;
+    }
+
+    await this.sectionModel.bulkWrite(
+      bulkOps,
+    );
   }
 }

@@ -6,16 +6,41 @@ import {
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
+
 import { Types } from 'mongoose';
 
-import type { ISectionRepository } from './interfaces/section-repository.interface';
-import { SECTION_REPOSITORY } from './interfaces/section-repository.interface';
+import type {
+  ISectionRepository,
+} from './interfaces/section-repository.interface';
 
-import { assertFound, assertDeleted } from '../../../common/utils/assert-found.util';
-import { CreateSectionDto } from './dto/create-section.dto';
-import { UpdateSectionDto } from './dto/update-section.dto';
-import { EventsService } from '../events.service';
-import { SectionDocument } from './schemas/section.schema';
+import {
+  SECTION_REPOSITORY,
+} from './interfaces/section-repository.interface';
+
+import {
+  assertFound,
+  assertDeleted,
+} from '../../../common/utils/assert-found.util';
+
+import {
+  CreateSectionDto,
+} from './dto/create-section.dto';
+
+import {
+  UpdateSectionDto,
+} from './dto/update-section.dto';
+
+import {
+  EventsService,
+} from '../events.service';
+
+import {
+  SectionDocument,
+} from './schemas/section.schema';
+
+import {
+  PagesService,
+} from '../pages/pages.service';
 
 export interface BatchSectionPayload {
   organizationId: string;
@@ -24,199 +49,612 @@ export interface BatchSectionPayload {
   content: Record<string, unknown>;
   order?: number;
   visible?: boolean;
+  pageId?: string;
 }
 
 @Injectable()
 export class SectionsService {
-  private readonly logger = new Logger(SectionsService.name);
+  private readonly logger =
+    new Logger(SectionsService.name);
 
   constructor(
     @Inject(SECTION_REPOSITORY)
-    private readonly sectionRepo: ISectionRepository,
-    @Inject(forwardRef(() => EventsService))
-    private readonly eventsService: EventsService,
+    private readonly sectionRepo:
+      ISectionRepository,
+
+    @Inject(
+      forwardRef(() => EventsService),
+    )
+    private readonly eventsService:
+      EventsService,
+
+    @Inject(
+      forwardRef(() => PagesService),
+    )
+    private readonly pagesService:
+      PagesService,
   ) {}
 
-  /**
-   * Helper to ensure valid Mongo ObjectIds before querying the database.
-   */
-  private toValidId(id: string, label: string): string {
-    if (!id || !Types.ObjectId.isValid(id)) {
-      throw new BadRequestException(`Invalid ${label} ID format: ${id}`);
+  // =========================================================
+  // HELPERS
+  // =========================================================
+
+  private toValidId(
+    id: string,
+    label: string,
+  ): string {
+    if (
+      !id ||
+      !Types.ObjectId.isValid(id)
+    ) {
+      throw new BadRequestException(
+        `Invalid ${label} ID format: ${id}`,
+      );
     }
+
     return id;
   }
 
-  /**
-   * Creates a single section for a tenant event.
-   */
+  private async resolvePageId(
+    organizationId: string,
+    eventId: string,
+    pageId?: string,
+  ): Promise<string> {
+    const validOrgId =
+      this.toValidId(
+        organizationId,
+        'organization',
+      );
+
+    const validEventId =
+      this.toValidId(
+        eventId,
+        'event',
+      );
+
+    if (pageId) {
+      const validPageId =
+        this.toValidId(
+          pageId,
+          'page',
+        );
+
+      await this.pagesService
+        .findByIdForTenantAndEventOrThrow(
+          validPageId,
+          validOrgId,
+          validEventId,
+        );
+
+      return validPageId;
+    }
+
+    const homePage =
+      await this.pagesService.ensureHomePage(
+        validOrgId,
+        validEventId,
+      );
+
+    const resolvedId =
+      homePage._id?.toString() ??
+      homePage.id?.toString();
+
+    if (!resolvedId) {
+      throw new BadRequestException(
+        'Unable to resolve Home page ID.',
+      );
+    }
+
+    return resolvedId;
+  }
+
+  // =========================================================
+  // CREATE
+  // =========================================================
+
   async create(
     organizationId: string,
     eventId: string,
-    dto: CreateSectionDto,
+    dto: CreateSectionDto & {
+      pageId?: string;
+    },
   ): Promise<SectionDocument> {
-    const validOrgId = this.toValidId(organizationId, 'organization');
-    const validEventId = this.toValidId(eventId, 'event');
+    const validOrgId =
+      this.toValidId(
+        organizationId,
+        'organization',
+      );
 
-    // 1. Verify parent event ownership
-    await this.eventsService.findByIdForTenantOrThrow(validEventId, validOrgId);
+    const validEventId =
+      this.toValidId(
+        eventId,
+        'event',
+      );
 
-    // 2. Persist section with guaranteed default payload structure
+    await this.eventsService
+      .findByIdForTenantOrThrow(
+        validEventId,
+        validOrgId,
+      );
+
+    const pageId =
+      await this.resolvePageId(
+        validOrgId,
+        validEventId,
+        dto.pageId,
+      );
+
     return this.sectionRepo.create({
       ...dto,
-      organizationId: validOrgId as any,
-      eventId: validEventId as any,
-      content: dto.content ?? {},
-      order: dto.order ?? 0,
-      visible: dto.visible ?? true,
+
+      organizationId:
+        validOrgId,
+
+      eventId:
+        validEventId,
+
+      pageId,
+
+      content:
+        dto.content ?? {},
+
+      order:
+        dto.order ?? 0,
+
+      visible:
+        dto.visible ?? true,
     });
   }
 
-  /**
-   * Bulk inserts sections during template/event initialization to prevent deadlocks.
-   */
-  async createMany(sections: BatchSectionPayload[]): Promise<SectionDocument[]> {
-    if (!sections || sections.length === 0) {
+  // =========================================================
+  // CREATE MANY
+  // =========================================================
+
+  async createMany(
+    sections: BatchSectionPayload[],
+  ): Promise<SectionDocument[]> {
+    if (
+      !Array.isArray(sections) ||
+      sections.length === 0
+    ) {
       return [];
     }
 
-    // Use optimized batch insertion if supported by underlying repository
-    if (this.sectionRepo.createMany) {
-      return this.sectionRepo.createMany(sections);
+    const pageCache =
+      new Map<string, string>();
+
+    const resolvedSections:
+      Record<string, any>[] = [];
+
+    for (const section of sections) {
+      const orgId =
+        this.toValidId(
+          section.organizationId,
+          'organization',
+        );
+
+      const eventId =
+        this.toValidId(
+          section.eventId,
+          'event',
+        );
+
+      let pageId =
+        section.pageId;
+
+      if (pageId) {
+        pageId =
+          this.toValidId(
+            pageId,
+            'page',
+          );
+
+        await this.pagesService
+          .findByIdForTenantAndEventOrThrow(
+            pageId,
+            orgId,
+            eventId,
+          );
+      } else {
+        const cacheKey =
+          `${orgId}:${eventId}`;
+
+        pageId =
+          pageCache.get(cacheKey);
+
+        if (!pageId) {
+          const homePage =
+            await this.pagesService
+              .ensureHomePage(
+                orgId,
+                eventId,
+              );
+
+          pageId =
+            homePage._id?.toString() ??
+            homePage.id?.toString();
+
+          if (!pageId) {
+            throw new BadRequestException(
+              'Unable to resolve Home page ID.',
+            );
+          }
+
+          pageCache.set(
+            cacheKey,
+            pageId,
+          );
+        }
+      }
+
+      resolvedSections.push({
+        type:
+          section.type,
+
+        content:
+          section.content ?? {},
+
+        organizationId:
+          orgId,
+
+        eventId:
+          eventId,
+
+        pageId,
+
+        order:
+          section.order ?? 0,
+
+        visible:
+          section.visible ?? true,
+      });
     }
 
-    // Fallback parallel insertion
+    if (this.sectionRepo.createMany) {
+      return this.sectionRepo.createMany(
+        resolvedSections,
+      );
+    }
+
     return Promise.all(
-      sections.map((sec) =>
-        this.sectionRepo.create({
-          type: sec.type as any,
-          content: sec.content ?? {},
-          organizationId: sec.organizationId as any,
-          eventId: sec.eventId as any,
-          order: sec.order ?? 0,
-          visible: sec.visible ?? true,
-        }),
+      resolvedSections.map(
+        (section) =>
+          this.sectionRepo.create(
+            section,
+          ),
       ),
     );
   }
 
-  /**
-   * Retrieves all sections for a specific event ordered for rendering.
-   */
-  async listForEvent(
+  // =========================================================
+  // FIND BY EVENT
+  // =========================================================
+
+  async findByEvent(
     organizationId: string,
     eventId: string,
+    pageId?: string,
   ): Promise<SectionDocument[]> {
-    const validOrgId = this.toValidId(organizationId, 'organization');
-    const validEventId = this.toValidId(eventId, 'event');
+    const validOrgId =
+      this.toValidId(
+        organizationId,
+        'organization',
+      );
 
-    await this.eventsService.findByIdForTenantOrThrow(validEventId, validOrgId);
-    return this.sectionRepo.findByEvent(validEventId);
+    const validEventId =
+      this.toValidId(
+        eventId,
+        'event',
+      );
+
+    await this.eventsService
+      .findByIdForTenantOrThrow(
+        validEventId,
+        validOrgId,
+      );
+
+    const all =
+      await this.sectionRepo.findByEvent(
+        validEventId,
+        validOrgId,
+      );
+
+    if (!pageId) {
+      return all;
+    }
+
+    const validPageId =
+      this.toValidId(
+        pageId,
+        'page',
+      );
+
+    await this.pagesService
+      .findByIdForTenantAndEventOrThrow(
+        validPageId,
+        validOrgId,
+        validEventId,
+      );
+
+    return all.filter(
+      (section) =>
+        section.pageId &&
+        String(section.pageId) ===
+          validPageId,
+    );
   }
 
-  /**
-   * Fetches a single section by ID, ensuring correct scope and full field hydration.
-   */
+  // =========================================================
+  // LIST FOR EVENT
+  // =========================================================
+
+async listForEvent(
+    organizationId: string,
+    eventId: string,
+    pageId?: string,
+  ): Promise<SectionDocument[]> {
+    return this.findByEvent(
+      organizationId,
+      eventId,
+      pageId,
+    );
+  }
+
+  // =========================================================
+  // FIND ONE
+  // =========================================================
+
   async findOne(
     organizationId: string,
     eventId: string,
     id: string,
   ): Promise<SectionDocument> {
-    const validOrgId = this.toValidId(organizationId, 'organization');
-    const validEventId = this.toValidId(eventId, 'event');
-    const validSectionId = this.toValidId(id, 'section');
+    const validOrgId =
+      this.toValidId(
+        organizationId,
+        'organization',
+      );
 
-    await this.eventsService.findByIdForTenantOrThrow(validEventId, validOrgId);
+    const validEventId =
+      this.toValidId(
+        eventId,
+        'event',
+      );
 
-    const section = await this.sectionRepo.findByIdForTenantAndEvent(
-      validSectionId,
-      validOrgId,
-      validEventId,
-    );
+    const validSectionId =
+      this.toValidId(
+        id,
+        'section',
+      );
+
+    await this.eventsService
+      .findByIdForTenantOrThrow(
+        validEventId,
+        validOrgId,
+      );
+
+    const section =
+      await this.sectionRepo
+        .findByIdForTenantAndEvent(
+          validSectionId,
+          validOrgId,
+          validEventId,
+        );
 
     if (!section) {
-      throw new NotFoundException(`Section with ID ${validSectionId} not found`);
+      throw new NotFoundException(
+        `Section with ID ${validSectionId} not found`,
+      );
     }
 
     return section;
   }
 
-  /**
-   * Updates section properties and deep merges `content` objects to prevent 
-   * partial updates from stripping existing fields.
-   */
+  // =========================================================
+  // UPDATE
+  // =========================================================
+
   async update(
     organizationId: string,
     eventId: string,
     id: string,
-    dto: Partial<CreateSectionDto> | UpdateSectionDto,
+    dto:
+      | Partial<CreateSectionDto>
+      | UpdateSectionDto
+      | (Partial<CreateSectionDto> & {
+          pageId?: string;
+        }),
   ): Promise<SectionDocument> {
-    const validOrgId = this.toValidId(organizationId, 'organization');
-    const validEventId = this.toValidId(eventId, 'event');
-    const validSectionId = this.toValidId(id, 'section');
+    const validOrgId =
+      this.toValidId(
+        organizationId,
+        'organization',
+      );
 
-    // 1. Verify parent event belongs to organization
-    await this.eventsService.findByIdForTenantOrThrow(validEventId, validOrgId);
+    const validEventId =
+      this.toValidId(
+        eventId,
+        'event',
+      );
 
-    // 2. Locate existing document
-    const existing = await this.sectionRepo.findByIdForTenantAndEvent(
-      validSectionId,
-      validOrgId,
-      validEventId,
-    );
+    const validSectionId =
+      this.toValidId(
+        id,
+        'section',
+      );
+
+    await this.eventsService
+      .findByIdForTenantOrThrow(
+        validEventId,
+        validOrgId,
+      );
+
+    const existing =
+      await this.sectionRepo
+        .findByIdForTenantAndEvent(
+          validSectionId,
+          validOrgId,
+          validEventId,
+        );
 
     if (!existing) {
-      this.logger.error(
-        `[SectionsService] Update failed — Section not found. Target ID: "${validSectionId}", Org ID: "${validOrgId}", Event ID: "${validEventId}"`,
+      throw new NotFoundException(
+        `Section with ID ${validSectionId} not found for this event`,
       );
-      throw new NotFoundException(`Section with ID ${validSectionId} not found for this event`);
     }
 
-    // 3. Prepare payload, safely merging nested content objects if updated
-    const updatePayload: Record<string, any> = { ...dto };
+    const updatePayload:
+      Record<string, any> = {
+      ...dto,
+    };
 
-    if (dto.content) {
+    if (
+      'pageId' in dto &&
+      dto.pageId !== undefined
+    ) {
+      updatePayload.pageId =
+        await this.resolvePageId(
+          validOrgId,
+          validEventId,
+          dto.pageId,
+        );
+    }
+
+    if (
+      dto.content !== undefined
+    ) {
       updatePayload.content = {
-        ...(existing.content || {}),
-        ...dto.content,
+        ...(existing.content ?? {}),
+        ...(dto.content ?? {}),
       };
     }
 
-    // 4. Update and return updated document state
-    const updated = await this.sectionRepo.updateById(validSectionId, updatePayload);
-    return assertFound(updated, 'Section not found after update execution');
+    const updated =
+      await this.sectionRepo.updateById(
+        validSectionId,
+        updatePayload,
+      );
+
+    return assertFound(
+      updated,
+      'Section not found after update execution',
+    );
   }
 
-  /**
-   * Reorders sections for an event based on an ordered array of section IDs.
-   */
+  // =========================================================
+  // REORDER
+  // =========================================================
+
   async reorder(
     organizationId: string,
     eventId: string,
     orderedIds: string[],
   ): Promise<void> {
-    const validOrgId = this.toValidId(organizationId, 'organization');
-    const validEventId = this.toValidId(eventId, 'event');
+    const validOrgId =
+      this.toValidId(
+        organizationId,
+        'organization',
+      );
 
-    await this.eventsService.findByIdForTenantOrThrow(validEventId, validOrgId);
-    return this.sectionRepo.reorder(validEventId, orderedIds);
+    const validEventId =
+      this.toValidId(
+        eventId,
+        'event',
+      );
+
+    await this.eventsService
+      .findByIdForTenantOrThrow(
+        validEventId,
+        validOrgId,
+      );
+
+    if (!Array.isArray(orderedIds)) {
+      throw new BadRequestException(
+        'orderedIds must be an array',
+      );
+    }
+
+    for (const id of orderedIds) {
+      this.toValidId(
+        id,
+        'section',
+      );
+    }
+
+    return this.sectionRepo.reorder(
+      validOrgId,
+      validEventId,
+      orderedIds,
+    );
   }
 
-  /**
-   * Deletes a section scoped to tenant and event.
+  // =========================================================
+  // REMOVE
+  // =========================================================
+
+async remove(
+  organizationId: string,
+  eventId: string,
+  id: string,
+): Promise<{ deleted: true }> {
+  const validOrgId =
+    this.toValidId(
+      organizationId,
+      'organization',
+    );
+
+  const validEventId =
+    this.toValidId(
+      eventId,
+      'event',
+    );
+
+  const validSectionId =
+    this.toValidId(
+      id,
+      'section',
+    );
+
+  await this.eventsService
+    .findByIdForTenantOrThrow(
+      validEventId,
+      validOrgId,
+    );
+
+  /*
+   * IMPORTANT:
+   *
+   * Verify the section belongs to BOTH:
+   *
+   * organizationId
+   * eventId
+   *
+   * before performing the delete.
    */
-  async remove(
-    organizationId: string,
-    eventId: string,
-    id: string,
-  ): Promise<{ deleted: true }> {
-    const validOrgId = this.toValidId(organizationId, 'organization');
-    const validEventId = this.toValidId(eventId, 'event');
-    const validSectionId = this.toValidId(id, 'section');
+  const section =
+    await this.sectionRepo
+      .findByIdForTenantAndEvent(
+        validSectionId,
+        validOrgId,
+        validEventId,
+      );
 
-    await this.eventsService.findByIdForTenantOrThrow(validEventId, validOrgId);
-
-    const deleted = await this.sectionRepo.deleteByIdForTenant(validSectionId, validOrgId);
-    return assertDeleted(deleted, 'Section not found or already deleted');
+  if (!section) {
+    throw new NotFoundException(
+      `Section with ID ${validSectionId} not found for this event`,
+    );
   }
+
+  const deleted =
+    await this.sectionRepo
+      .deleteByIdForTenant(
+        validSectionId,
+        validOrgId,
+      );
+
+  return assertDeleted(
+    deleted,
+    'Section not found or already deleted',
+  );
+}
 }

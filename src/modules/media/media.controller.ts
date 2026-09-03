@@ -20,22 +20,20 @@ import { MediaService } from './media.service';
 import type { UploadedFile } from '../../common/types/uploaded-file.type';
 
 @ApiTags('media')
-@Controller()
+@Controller('organizations/:orgId') // Scopes the entire controller to /api/v1/organizations/:orgId
 export class MediaController {
   constructor(private readonly mediaService: MediaService) {}
 
-  // 1. PUBLIC / READ-ONLY LISTING
-  @Get('organizations/:orgId/events/:eventId/media')
+  @Get('events/:eventId/media')
   @ApiOperation({ summary: 'List media for an event' })
   list(@Param('orgId') orgId: string, @Param('eventId') eventId: string) {
     return this.mediaService.listForEvent(orgId, eventId);
   }
 
-  // 2. PROTECTED MEDIA UPLOAD
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, TenantContextGuard, PermissionsGuard)
   @RequirePermission(Permission.EVENT_EDIT)
-  @Post('organizations/:orgId/events/:eventId/media')
+  @Post('events/:eventId/media') // Results in: /api/v1/organizations/:orgId/events/:eventId/media
   @ApiOperation({ summary: 'Upload an image/video for an event' })
   @ApiConsumes('multipart/form-data')
   @ApiBody({ schema: { type: 'object', properties: { file: { type: 'string', format: 'binary' } } } })
@@ -48,11 +46,25 @@ export class MediaController {
     return this.mediaService.upload(orgId, eventId, file);
   }
 
-  // 3. PROTECTED MEDIA DELETION
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, TenantContextGuard, PermissionsGuard)
   @RequirePermission(Permission.EVENT_EDIT)
-  @Delete('organizations/:orgId/media/:id')
+  @Post('media') // Results in: /api/v1/organizations/:orgId/media (org-level/logo uploads)
+  @ApiOperation({ summary: 'Upload media not tied to a specific event (e.g. team/organization logos)' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({ schema: { type: 'object', properties: { file: { type: 'string', format: 'binary' } } } })
+  @UseInterceptors(FileInterceptor('file'))
+  uploadOrgLevel(
+    @Param('orgId') orgId: string,
+    @UploadedFileDecorator() file: UploadedFile,
+  ) {
+    return this.mediaService.uploadOrgLevel(orgId, file);
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, TenantContextGuard, PermissionsGuard)
+  @RequirePermission(Permission.EVENT_EDIT)
+  @Delete('media/:id') // Results in: /api/v1/organizations/:orgId/media/:id
   @ApiOperation({ summary: 'Remove a media asset' })
   remove(@Param('orgId') orgId: string, @Param('id') id: string) {
     return this.mediaService.remove(orgId, id);

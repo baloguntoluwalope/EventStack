@@ -4,19 +4,24 @@ import { Model } from 'mongoose';
 import { OnEvent } from '@nestjs/event-emitter';
 import { AuditLog, AuditLogDocument } from './schemas/audit-log.schema';
 
-interface AuditRecordedPayload {
+export interface AuditRecordedPayload {
   entity: string;
   action: string;
   userId: string | null;
   organizationId: string | null;
   entityId: string | null;
-  ipAddress: string;
-  userAgent: string;
+  ipAddress?: string;
+  userAgent?: string;
+  beforeState?: Record<string, any> | null;
+  afterState?: Record<string, any> | null;
+  occurredAt?: Date;
 }
 
 @Injectable()
 export class AuditService {
-  constructor(@InjectModel(AuditLog.name) private model: Model<AuditLogDocument>) {}
+  constructor(
+    @InjectModel(AuditLog.name) private readonly model: Model<AuditLogDocument>,
+  ) {}
 
   @OnEvent('audit.recorded')
   async handleAuditRecorded(payload: AuditRecordedPayload) {
@@ -28,6 +33,9 @@ export class AuditService {
       entityId: payload.entityId,
       ipAddress: payload.ipAddress,
       userAgent: payload.userAgent,
+      beforeState: payload.beforeState ?? null,
+      afterState: payload.afterState ?? null,
+      createdAt: payload.occurredAt ?? new Date(),
     });
   }
 
@@ -41,6 +49,9 @@ export class AuditService {
   }
 
   findForEntity(entity: string, entityId: string) {
-    return this.model.find({ entity, entityId }).sort({ createdAt: -1 }).exec();
+    return this.model
+      .find({ entity, entityId })
+      .sort({ createdAt: -1 })
+      .exec();
   }
 }

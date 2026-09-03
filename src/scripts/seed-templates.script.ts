@@ -13,12 +13,278 @@ async function run() {
 
   // Direct model access for a true hard delete — Template has a unique index
   // on `slug`, and a soft delete (deletedAt set, doc still present) would
-  // block recreating 'grace'/'pulse'/'harvest' with the same slug.
+  // block recreating templates with the same slug.
   const templateModel = app.get<Model<TemplateDocument>>(getModelToken(Template.name));
 
   try {
     const { deletedCount } = await templateModel.deleteMany({});
     console.log(`✓ Removed ${deletedCount} existing template(s)`);
+
+    // ==========================================
+    // TEMPLATES
+    // ==========================================
+
+    await templateRepo.create({
+      name: 'Horizon',
+      slug: 'horizon',
+      category: 'conference',
+      description: 'A full multi-page event site — Home, About, Schedule, and Contact as separate pages.',
+      previewImageUrl: 'https://images.unsplash.com/photo-1505373877841-8d25f7d46678?w=800&q=80',
+      isPremium: false,
+      active: true,
+      defaultSections: [], // unused for multi-page templates — defaultPages is authoritative
+      defaultPages: [
+        {
+          title: 'Home',
+          slug: '',
+          isHome: true,
+          sections: [
+            {
+              type: 'hero', order: 0,
+              content: {
+                heading: 'Horizon Conference 2027',
+                subheading: 'Three days of ideas, connection, and momentum.',
+                imageUrl: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1600&q=80',
+              },
+            },
+            {
+              type: 'countdown', order: 1,
+              content: { heading: 'Doors Open In' },
+            },
+            {
+              type: 'testimonials', order: 2,
+              content: {
+                items: [
+                  { quote: 'Best-organized event I attended all year.', name: 'Returning Attendee' },
+                  { quote: 'The talks alone were worth the trip.', name: 'First-Time Guest' },
+                ],
+              },
+            },
+            {
+              type: 'footer', order: 3,
+              content: { heading: 'Horizon Conference', description: 'See you there.' },
+            },
+          ],
+        },
+        {
+          title: 'About',
+          slug: 'about',
+          isHome: false,
+          sections: [
+            {
+              type: 'about', order: 0,
+              content: {
+                heading: 'What Horizon Is About',
+                description:
+                  'Horizon began as a small gathering of practitioners who wanted fewer keynotes and more real conversation. Today it brings together builders, organizers, and thinkers for three days of honest talks, hands-on workshops, and the kind of hallway conversations that actually change how you work.',
+                imageUrl: 'https://images.unsplash.com/photo-1475721027785-f74eccf877e2?w=1200&q=80',
+              },
+            },
+            {
+              type: 'speakers', order: 1,
+              content: {
+                items: [
+                  { name: 'Amara Chukwu', role: 'Founder, Northstar Labs', photoUrl: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=400&q=80' },
+                  { name: 'Daniel Reyes', role: 'VP Engineering, Fluxwave', photoUrl: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=400&q=80' },
+                ],
+              },
+            },
+          ],
+        },
+        {
+          title: 'Schedule',
+          slug: 'schedule',
+          isHome: false,
+          sections: [
+            {
+              type: 'programme', order: 0,
+              content: {
+                items: [
+                  { time: 'Day 1 · 9:00 AM', title: 'Registration & Welcome' },
+                  { time: 'Day 1 · 10:30 AM', title: 'Opening Keynote' },
+                  { time: 'Day 2 · 9:30 AM', title: 'Workshops' },
+                  { time: 'Day 3 · 2:00 PM', title: 'Closing Remarks' },
+                ],
+              },
+            },
+            {
+              type: 'gallery', order: 1,
+              content: {
+                items: [
+                  'https://images.unsplash.com/photo-1591115765373-5207764f72e7?w=600&q=80',
+                  'https://images.unsplash.com/photo-1505373877841-8d25f7d46678?w=600&q=80',
+                ],
+              },
+            },
+          ],
+        },
+        {
+          title: 'Contact',
+          slug: 'contact',
+          isHome: false,
+          sections: [
+            {
+              type: 'contact', order: 0,
+              content: {
+                heading: 'Get in Touch',
+                description: 'Reach the organizing team at hello@horizonconf.example — we typically respond within a day.',
+              },
+            },
+          ],
+        },
+      ],
+    } as any);
+    console.log('✓ Created template: Horizon (multi-page, General — 4 pages)');
+
+    await templateRepo.create({
+      name: 'Stadium',
+      slug: 'stadium',
+      category: 'sports',
+      description: 'A full multi-page tournament site — Home with live scores, a dedicated Fixtures page, Standings, and a Teams page.',
+      previewImageUrl: 'https://images.unsplash.com/photo-1522778119026-d647f0596c20?w=800&q=80',
+      isPremium: false,
+      active: true,
+      defaultSections: [],
+      defaultPages: [
+        {
+          title: 'Home',
+          slug: '',
+          isHome: true,
+          sections: [
+            {
+              type: 'hero', order: 0,
+              content: {
+                heading: 'City Football League 2027',
+                subheading: 'Live scores. Real standings. Every fixture, in one place.',
+                imageUrl: 'https://images.unsplash.com/photo-1489944440615-453fc2b6a9a9?w=1600&q=80',
+              },
+            },
+            { type: 'live_match', order: 1, content: {} },
+            { type: 'standings', order: 2, content: {} },
+            {
+              type: 'footer', order: 3,
+              content: { description: 'Powered by EventStack Sports.' },
+            },
+          ],
+        },
+        {
+          title: 'Fixtures',
+          slug: 'fixtures',
+          isHome: false,
+          sections: [
+            { type: 'fixtures', order: 0, content: {} },
+          ],
+        },
+        {
+          title: 'Standings',
+          slug: 'standings',
+          isHome: false,
+          sections: [
+            { type: 'standings', order: 0, content: {} },
+          ],
+        },
+        {
+          title: 'Teams',
+          slug: 'teams',
+          isHome: false,
+          sections: [
+            { type: 'teams', order: 0, content: {} },
+          ],
+        },
+      ],
+    } as any);
+    console.log('✓ Created template: Stadium (multi-page, Sports — 4 pages)');
+
+    await templateRepo.create({
+      name: 'Matchday',
+      slug: 'matchday',
+      category: 'sports',
+      description: 'Live scores, fixtures, and standings for your tournament — updates automatically as matches happen.',
+      previewImageUrl: 'https://images.unsplash.com/photo-1522778119026-d647f0596c20?w=800&q=80',
+      isPremium: false,
+      active: true,
+      defaultSections: [
+        { type: 'hero', order: 0, content: { subheading: 'Follow every match, live.' } },
+        { type: 'live_match', order: 1, content: {} },
+        { type: 'fixtures', order: 2, content: {} },
+        { type: 'standings', order: 3, content: {} },
+        { type: 'teams', order: 4, content: {} },
+        { type: 'footer', order: 5, content: { description: 'Powered by EventStack Sports.' } },
+      ],
+    } as any);
+    console.log('✓ Created template: Matchday (Sports)');
+
+    await templateRepo.create({
+      name: 'League Pulse',
+      slug: 'league-pulse',
+      category: 'sports',
+      description: 'A full tournament hub — fixtures, live matches, standings, and squads in one place.',
+      previewImageUrl: 'https://images.unsplash.com/photo-1489944440615-453fc2b6a9a9?w=800&q=80',
+      isPremium: false,
+      active: true,
+      defaultSections: [
+        { type: 'hero', order: 0, content: { subheading: 'Live scores. Real standings. Every fixture.' } },
+        { type: 'live_match', order: 1, content: {} },
+        { type: 'standings', order: 2, content: {} },
+        { type: 'fixtures', order: 3, content: {} },
+        { type: 'teams', order: 4, content: {} },
+        { type: 'players', order: 5, content: {} },
+        { type: 'footer', order: 6, content: {} },
+      ],
+    } as any);
+    console.log('✓ Created template: League Pulse (Sports)');
+
+    await templateRepo.create({
+      name: 'Tournament Central (Multi-Page)',
+      slug: 'tournament-central-multi',
+      category: 'sports',
+      description: 'A comprehensive multi-page portal for major tournaments featuring dedicated pages for live action, fixtures, standings, and competing squads.',
+      previewImageUrl: 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=800&q=80',
+      isPremium: false,
+      active: true,
+      defaultPages: [
+        {
+          title: 'Home',
+          slug: '',
+          isHome: true,
+          sections: [
+            { type: 'hero', order: 0, content: { subheading: 'Welcome to the ultimate tournament experience.' } },
+            { type: 'live_match', order: 1, content: {} },
+            { type: 'countdown', order: 2, content: { label: 'Next kickoff in' } },
+            { type: 'footer', order: 3, content: { description: 'Powered by EventStack Sports.' } },
+          ],
+        },
+        {
+          title: 'Fixtures & Results',
+          slug: 'fixtures',
+          isHome: false,
+          sections: [
+            { type: 'fixtures', order: 0, content: {} },
+            { type: 'footer', order: 1, content: {} },
+          ],
+        },
+        {
+          title: 'Standings',
+          slug: 'standings',
+          isHome: false,
+          sections: [
+            { type: 'standings', order: 0, content: {} },
+            { type: 'footer', order: 1, content: {} },
+          ],
+        },
+        {
+          title: 'Teams & Squads',
+          slug: 'teams',
+          isHome: false,
+          sections: [
+            { type: 'teams', order: 0, content: {} },
+            { type: 'players', order: 1, content: {} },
+            { type: 'footer', order: 2, content: {} },
+          ],
+        },
+      ],
+    } as any);
+    console.log('✓ Created template: Tournament Central (Multi-Page)');
 
     await templateRepo.create({
       name: 'Grace',
@@ -243,6 +509,10 @@ async function run() {
       ],
     } as any);
     console.log('✓ Created template: Harvest');
+
+    // ==========================================
+    // THEMES
+    // ==========================================
 
     await themeRepo.create({
       name: 'Warm Sunrise',

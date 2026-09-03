@@ -38,6 +38,14 @@ import { SeoModule } from './modules/seo/seo.module';
 import { AnalyticsModule } from './modules/analytics/analytics.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { PlatformDashboardModule } from './modules/platform-dashboard/platform-dashboard.module';
+import { PlayersModule } from './modules/sports/players/players.module';
+import { GroupsModule } from './modules/sports/groups/groups.module';
+import { TournamentsModule } from './modules/sports/tournaments/tournaments.module';
+import { TeamsModule } from './modules/sports/teams/teams.module';
+import { FixturesModule } from './modules/sports/fixtures/fixtures.module';
+import {SportsModule} from './modules/sports/sports.module'
+
+
 
 @Module({
   imports: [
@@ -83,6 +91,14 @@ import { PlatformDashboardModule } from './modules/platform-dashboard/platform-d
     AnalyticsModule,
     NotificationsModule,
     PlatformDashboardModule,
+    PlayersModule,
+    GroupsModule,
+    TournamentsModule,
+    TeamsModule,
+    FixturesModule,
+    SportsModule,
+
+    
   ],
   controllers: [AppController],
   providers: [

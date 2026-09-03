@@ -3,6 +3,9 @@ import { HydratedDocument, Types } from 'mongoose';
 import { BaseEntity } from '../../../common/base/base-entity.schema';
 import { EventStatus } from '../../../common/constants/event-status.constants';
 
+
+export enum EventType { GENERAL = 'general', SPORTS = 'sports' }
+
 @Schema({ timestamps: true })
 export class Event extends BaseEntity {
   @Prop({ type: Types.ObjectId, ref: 'Organization', required: true, index: true })
@@ -10,6 +13,9 @@ export class Event extends BaseEntity {
 
   @Prop({ required: true })
   title: string;
+
+    @Prop({ enum: EventType, default: EventType.GENERAL })
+  type: EventType;
 
   @Prop({ required: true, unique: true, index: true })
   slug: string;
@@ -19,6 +25,7 @@ export class Event extends BaseEntity {
 
   @Prop({ type: String, enum: EventStatus, default: EventStatus.DRAFT })
   status: EventStatus;
+  
 
   @Prop({ type: Types.ObjectId, ref: 'Template' })
   templateId?: Types.ObjectId;

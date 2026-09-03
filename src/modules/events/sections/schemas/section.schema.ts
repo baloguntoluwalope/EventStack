@@ -1,5 +1,15 @@
-import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { HydratedDocument, Types, Schema as MongooseSchema } from 'mongoose';
+import {
+  Prop,
+  Schema,
+  SchemaFactory,
+} from '@nestjs/mongoose';
+
+import {
+  HydratedDocument,
+  Types,
+  Schema as MongooseSchema,
+} from 'mongoose';
+
 import { BaseEntity } from '../../../../common/base/base-entity.schema';
 
 export enum SectionType {
@@ -18,41 +28,102 @@ export enum SectionType {
   SPONSORS = 'sponsors',
   FOOTER = 'footer',
   TESTIMONIALS = 'testimonials',
+
+  // Sports
+  LIVE_MATCH = 'live_match',
+  FIXTURES = 'fixtures',
+  STANDINGS = 'standings',
+  TEAMS = 'teams',
+  PLAYERS = 'players',
+  KNOCKOUT_BRACKET = 'knockout_bracket',
 }
 
-@Schema({ timestamps: true, minimize: false })
+@Schema({
+  timestamps: true,
+  minimize: false,
+})
 export class Section extends BaseEntity {
-  @Prop({ type: Types.ObjectId, ref: 'Organization', required: true, index: true })
+  @Prop({
+    type: Types.ObjectId,
+    ref: 'Organization',
+    required: true,
+    index: true,
+  })
   organizationId: Types.ObjectId;
 
-  @Prop({ type: Types.ObjectId, ref: 'Event', required: true, index: true })
+  @Prop({
+    type: Types.ObjectId,
+    ref: 'Event',
+    required: true,
+    index: true,
+  })
   eventId: Types.ObjectId;
 
-  @Prop({ enum: SectionType, required: true })
+  @Prop({
+    type: Types.ObjectId,
+    ref: 'Page',
+    default: null,
+    index: true,
+  })
+  pageId: Types.ObjectId | null;
+
+  @Prop({
+    enum: SectionType,
+    required: true,
+  })
   type: SectionType;
 
-  @Prop({ default: 0 })
+  @Prop({
+    default: 0,
+  })
   order: number;
 
-  @Prop({ type: MongooseSchema.Types.Mixed, default: {} })
+  @Prop({
+    type: MongooseSchema.Types.Mixed,
+    default: {},
+  })
   content: Record<string, any>;
 
-  @Prop({ default: true })
+  @Prop({
+    default: true,
+  })
   visible: boolean;
 }
 
-export type SectionDocument = HydratedDocument<Section>;
-export const SectionSchema = SchemaFactory.createForClass(Section);
+export type SectionDocument =
+  HydratedDocument<Section>;
 
-// Ensure virtuals (like `id`) and full objects are serialized in JSON responses
+export const SectionSchema =
+  SchemaFactory.createForClass(Section);
+
 SectionSchema.set('toJSON', {
   virtuals: true,
-  transform: (_, ret: Record<string, any>) => {
-    ret.id = ret._id?.toString();
+
+  transform: (
+    _doc,
+    ret: Record<string, any>,
+  ) => {
+    ret.id =
+      ret._id?.toString();
+
     return ret;
   },
 });
 
-// Compound index for tenant-scoped event section queries
-SectionSchema.index({ organizationId: 1, eventId: 1, _id: 1 });
-SectionSchema.index({ eventId: 1, order: 1 });
+SectionSchema.index({
+  organizationId: 1,
+  eventId: 1,
+  _id: 1,
+});
+
+SectionSchema.index({
+  eventId: 1,
+  order: 1,
+});
+
+SectionSchema.index({
+  organizationId: 1,
+  eventId: 1,
+  pageId: 1,
+  order: 1,
+});

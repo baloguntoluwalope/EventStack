@@ -1,6 +1,12 @@
 import { Injectable } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { InjectModel, InjectConnection } from '@nestjs/mongoose';
+import {
+  Model,
+  Connection,
+  ClientSession,
+  Types,
+} from 'mongoose';
+
 import { BaseTenantRepository } from '../../../common/base/base-tenant.repository';
 import { Event, EventDocument } from '../schemas/event.schema';
 import { IEventRepository } from '../interfaces/event-repository.interface';
@@ -11,20 +17,113 @@ export class MongooseEventRepository
   extends BaseTenantRepository<EventDocument>
   implements IEventRepository
 {
-  constructor(@InjectModel(Event.name) model: Model<EventDocument>) {
+  constructor(
+    @InjectModel(Event.name)
+    model: Model<EventDocument>,
+
+    @InjectConnection()
+    private readonly connection: Connection,
+  ) {
     super(model);
   }
 
-  /**
-   * Slugs are globally unique across the platform public URL space.
-   */
-  async findBySlug(slug: string): Promise<EventDocument | null> {
-    return this.findOne({ slug, deletedAt: null });
+  override create(
+    data: Partial<EventDocument>,
+    session?: ClientSession,
+  ): Promise<EventDocument> {
+    return this.model
+      .create([data], { session })
+      .then(
+        (documents) =>
+          documents[0] as EventDocument,
+      );
   }
+
+  async withTransaction<T>(
+    fn: (
+      session: ClientSession,
+    ) => Promise<T>,
+  ): Promise<T> {
+    const session =
+      await this.connection.startSession();
+
+    try {
+      let result!: T;
+
+      await session.withTransaction(
+        async () => {
+          result = await fn(session);
+        },
+      );
+
+      return result;
+    } finally {
+      await session.endSession();
+    }
+  }
+
+  async findBySlug(
+    slug: string,
+  ): Promise<EventDocument | null> {
+    return this.model
+      .findOne({
+        slug,
+        deletedAt: null,
+      })
+      .exec();
+  }
+
+
+  async findById(
+  id: string,
+): Promise<EventDocument | null> {
+  if (!id || !Types.ObjectId.isValid(id)) {
+    return null;
+  }
+
+  return this.model
+    .findOne({
+      _id: new Types.ObjectId(id),
+      deletedAt: null,
+    })
+    .exec();
+}
 
   async findAllPublished(): Promise<EventDocument[]> {
     return this.model
-      .find({ status: EventStatus.PUBLISHED, deletedAt: null })
+      .find({
+        status: EventStatus.PUBLISHED,
+        deletedAt: null,
+      })
+      .exec();
+  }
+
+  /**
+   * Explicit tenant lookup.
+   *
+   * This removes ambiguity from the inherited repository
+   * when debugging event detail requests.
+   */
+  override findByIdForTenant(
+    id: string,
+    organizationId: string,
+  ): Promise<EventDocument | null> {
+    if (
+      !Types.ObjectId.isValid(id) ||
+      !Types.ObjectId.isValid(
+        organizationId,
+      )
+    ) {
+      return Promise.resolve(null);
+    }
+
+    return this.model
+      .findOne({
+        _id: new Types.ObjectId(id),
+        organizationId:
+          new Types.ObjectId(organizationId),
+        deletedAt: null,
+      })
       .exec();
   }
 }

@@ -7,10 +7,22 @@ import { ThemesModule } from '../events/themes/themes.module';
 import { SectionsModule } from '../events/sections/sections.module';
 import { MembersModule } from '../tenancy/members/members.module';
 import { OrganizationsModule } from '../tenancy/organizations/organizations.module';
+import { PagesModule } from '../events/pages/pages.module';
+import { SeoModule } from '../seo/seo.module';
 
 @Module({
-  imports: [EventsModule, TemplatesModule, ThemesModule, SectionsModule, MembersModule, OrganizationsModule],
+  imports: [
+    EventsModule,
+    TemplatesModule,
+    ThemesModule,
+    SectionsModule,
+    MembersModule,
+    SeoModule,
+    OrganizationsModule,
+    PagesModule,
+  ],
   providers: [WebsiteBuilderService],
   controllers: [WebsiteBuilderController],
+  exports: [WebsiteBuilderService],
 })
 export class WebsiteBuilderModule {}

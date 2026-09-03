@@ -31,6 +31,12 @@ export class AuditLog {
 
   @Prop({ type: String })
   userAgent: string;
+
+    @Prop({ type: Object, default: null })
+  beforeState: Record<string, any> | null;
+
+  @Prop({ type: Object, default: null })
+  afterState: Record<string, any> | null;
 }
 
 export type AuditLogDocument = HydratedDocument<AuditLog>;

@@ -64,4 +64,9 @@ export class MediaService {
       'Media not found',
     );
   }
+
+    async uploadOrgLevel(organizationId: string, file: UploadedFile) {
+    const result = await this.storageProvider.uploadBuffer(file.buffer, `orgs/${organizationId}`);
+    return { url: result.url };
+  }
 }

@@ -70,18 +70,37 @@ export class TemplatesController {
   }
 
   @Get(':id/preview')
-  @ApiOperation({ summary: 'Render a template\'s own default sections (no event required)' })
+  @ApiOperation({ summary: 'Render a template\'s own default pages/sections (no event required)' })
   async preview(@Param('id') id: string) {
     const template = await this.templatesService.findByIdOrThrow(id);
+
+    if (template.defaultPages && template.defaultPages.length > 0) {
+      return {
+        event: { title: 'Your Event Name' },
+        theme: null,
+        pages: template.defaultPages.map((p, i) => ({
+          id: `preview-page-${i}`, title: p.title, slug: p.slug, isHome: p.isHome, showInNav: true,
+        })),
+        sectionsByPage: Object.fromEntries(
+          template.defaultPages.map((p, i) => [
+            `preview-page-${i}`,
+            p.sections.map((s, j) => ({ id: `preview-${i}-${j}`, type: s.type, order: s.order, content: s.content ?? {} })),
+          ]),
+        ),
+      };
+    }
+
+    // Single-page template — unchanged shape, wrapped in the same
+    // pages/sectionsByPage envelope so the frontend has one consistent
+    // response format regardless of template type.
+    const homePageId = 'preview-page-0';
     return {
       event: { title: 'Your Event Name' },
-      theme: null, // template has no assigned theme until an event picks one
-      sections: template.defaultSections.map((s, i) => ({
-        id: `preview-${i}`,
-        type: s.type,
-        order: s.order,
-        content: s.content ?? {},
-      })),
+      theme: null,
+      pages: [{ id: homePageId, title: 'Home', slug: '', isHome: true, showInNav: true }],
+      sectionsByPage: {
+        [homePageId]: template.defaultSections.map((s, i) => ({ id: `preview-${i}`, type: s.type, order: s.order, content: s.content ?? {} })),
+      },
     };
   }
 }
