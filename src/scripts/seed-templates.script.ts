@@ -21,8 +21,96 @@ async function run() {
     console.log(`✓ Removed ${deletedCount} existing template(s)`);
 
     // ==========================================
+    // THEMES
+    // ==========================================
+
+    await themeRepo.create({
+      name: 'Golden Cup Gold', slug: 'golden-cup-gold', isPremium: false, active: true,
+      tokens: { primaryColor: '#78350f', secondaryColor: '#92400e', backgroundColor: '#fffbeb', fontFamily: 'Georgia, serif', radius: '16px' },
+    } as any);
+
+    await themeRepo.create({
+      name: 'Elite League Dark', slug: 'elite-league-dark', isPremium: false, active: true,
+      tokens: { primaryColor: '#f8fafc', secondaryColor: '#94a3b8', backgroundColor: '#020617', fontFamily: 'Inter, sans-serif', radius: '20px' },
+    } as any);
+
+    // ==========================================
     // TEMPLATES
     // ==========================================
+
+    await templateRepo.create({
+      name: 'Golden Cup', slug: 'golden-cup', category: 'sports', isPremium: false, active: true,
+      description: 'A warm, celebratory tournament site — Home, Live, Fixtures, Standings, Teams, Tournament Info, and Gallery.',
+      previewImageUrl: 'https://images.unsplash.com/photo-1522778119026-d647f0596c20?w=800&q=80',
+      defaultSections: [],
+      defaultPages: [
+        { title: 'Home', slug: '', isHome: true, sections: [
+          { type: 'hero', order: 0, content: { subheading: 'A season worth celebrating.' } },
+          { type: 'live_match', order: 1, content: {} },
+          { type: 'about', order: 2, content: {
+              heading: 'About the Tournament',
+              description: 'A community-built competition bringing local teams together for a season of real football — organized, fair, and unforgettable.',
+              ctaLabel: 'Tournament Info', ctaHref: '/tournament-info',
+            } },
+          { type: 'fixtures', order: 3, content: { mode: 'preview', limit: 4 } },
+          { type: 'standings', order: 4, content: { mode: 'preview' } },
+          { type: 'sponsors', order: 5, content: { items: [] } },
+          { type: 'footer', order: 6, content: { description: 'See you on match day.' } },
+        ]},
+        { title: 'Live', slug: 'live', isHome: false, sections: [
+          { type: 'live_match', order: 0, content: {} },
+          { type: 'recent_results', order: 1, content: {} },
+        ]},
+        { title: 'Fixtures', slug: 'fixtures', isHome: false, sections: [{ type: 'fixtures', order: 0, content: { mode: 'full' } }] },
+        { title: 'Standings', slug: 'standings', isHome: false, sections: [{ type: 'standings', order: 0, content: { mode: 'full' } }] },
+        { title: 'Teams', slug: 'teams', isHome: false, sections: [{ type: 'teams', order: 0, content: {} }] },
+        { title: 'Tournament Info', slug: 'tournament-info', isHome: false, sections: [
+          { type: 'about', order: 0, content: { heading: 'How It Works', description: 'Format, rules, dates, and everything you need to know about this season.' } },
+          { type: 'venue', order: 1, content: { heading: 'Venue', description: 'Match location and directions.' } },
+          { type: 'contact', order: 2, content: { heading: 'Questions?' } },
+        ]},
+        { title: 'Gallery', slug: 'gallery', isHome: false, sections: [{ type: 'gallery', order: 0, content: { items: [] } }] },
+      ],
+    } as any);
+    console.log('✓ Created template: Golden Cup (multi-page Sports, 6 pages)');
+
+    await templateRepo.create({
+      name: 'Elite League', slug: 'elite-league', category: 'sports', isPremium: false, active: true,
+      description: 'A dark, broadcast-style premium tournament site — Home, Live Centre, Fixtures, Standings, Teams, Tournament Info, and Gallery.',
+      previewImageUrl: 'https://images.unsplash.com/photo-1489944440615-453fc2b6a9a9?w=800&q=80',
+      defaultSections: [],
+      defaultPages: [
+        { title: 'Home', slug: '', isHome: true, sections: [
+          { type: 'hero', order: 0, content: { subheading: 'Elite competition. Every matchday.' } },
+          { type: 'live_match', order: 1, content: {} },
+          { type: 'about', order: 2, content: {
+              heading: 'The League',
+              description: 'Where the region’s top clubs compete for the title — full fixtures, live scores, and a real knockout stage.',
+              ctaLabel: 'Tournament Info', ctaHref: '/tournament-info',
+            } },
+          { type: 'fixtures', order: 3, content: { mode: 'preview', limit: 4 } },
+          { type: 'standings', order: 4, content: { mode: 'preview' } },
+          { type: 'tournament_stats', order: 5, content: {} },
+          { type: 'sponsors', order: 6, content: { items: [] } },
+          { type: 'footer', order: 7, content: {} },
+        ]},
+        { title: 'Live', slug: 'live', isHome: false, sections: [
+          { type: 'live_match', order: 0, content: {} },
+          { type: 'recent_results', order: 1, content: {} },
+        ]},
+        { title: 'Fixtures', slug: 'fixtures', isHome: false, sections: [{ type: 'fixtures', order: 0, content: { mode: 'full' } }] },
+        { title: 'Standings', slug: 'standings', isHome: false, sections: [{ type: 'standings', order: 0, content: { mode: 'full' } }] },
+        { title: 'Knockout', slug: 'knockout', isHome: false, sections: [{ type: 'knockout_bracket', order: 0, content: {} }] },
+        { title: 'Teams', slug: 'teams', isHome: false, sections: [{ type: 'teams', order: 0, content: {} }] },
+        { title: 'Tournament Info', slug: 'tournament-info', isHome: false, sections: [
+          { type: 'about', order: 0, content: { heading: 'Format & Rules' } },
+          { type: 'venue', order: 1, content: { heading: 'Venue' } },
+          { type: 'contact', order: 2, content: {} },
+        ]},
+        { title: 'Gallery', slug: 'gallery', isHome: false, sections: [{ type: 'gallery', order: 0, content: { items: [] } }] },
+      ],
+    } as any);
+    console.log('✓ Created template: Elite League (multi-page Sports, 7 pages)');
 
     await templateRepo.create({
       name: 'Horizon',
@@ -511,7 +599,7 @@ async function run() {
     console.log('✓ Created template: Harvest');
 
     // ==========================================
-    // THEMES
+    // ADDITIONAL THEMES
     // ==========================================
 
     await themeRepo.create({

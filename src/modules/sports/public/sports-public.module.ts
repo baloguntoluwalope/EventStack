@@ -8,10 +8,12 @@ import { KnockoutModule } from '../knockout/knockout.module';
 import { TeamsModule } from '../teams/teams.module';
 import { MatchEventsModule } from '../match-events/match-events.module';
 import { GroupsModule } from '../groups/groups.module';
+import { PlayersModule } from '../players/players.module';
+import { StatisticsModule } from '../statistics/statistics.module';
 
 
 @Module({
-  imports: [TournamentsModule, FixturesModule, MatchesModule, StandingsModule, GroupsModule,KnockoutModule, MatchEventsModule, TeamsModule],
+  imports: [TournamentsModule, FixturesModule, MatchesModule, StatisticsModule, StandingsModule,PlayersModule, GroupsModule,KnockoutModule, MatchEventsModule, TeamsModule],
   controllers: [SportsPublicController],
 })
 export class SportsPublicModule {}

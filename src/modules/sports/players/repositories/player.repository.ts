@@ -154,6 +154,49 @@ export class MongoosePlayerRepository
 
     return result.modifiedCount > 0;
   }
+
+  /**
+ * Find a player for public display.
+ *
+ * No organizationId is required because the
+ * public endpoint is already resolving data
+ * from a public tournament/team.
+ */
+async findByIdPublic(
+  id: string,
+): Promise<PlayerDocument | null> {
+  if (!id) {
+    return null;
+  }
+
+  return this.playerModel
+    .findOne({
+      _id: id,
+      deletedAt: null,
+    })
+    .exec();
+}
+
+/**
+ * Public roster for a team.
+ */
+async findByTeamPublic(
+  teamId: string,
+): Promise<PlayerDocument[]> {
+  if (!teamId) {
+    return [];
+  }
+
+  return this.playerModel
+    .find({
+      teamId,
+      deletedAt: null,
+    })
+    .sort({
+      createdAt: 1,
+    })
+    .exec();
+}
 }
 
 

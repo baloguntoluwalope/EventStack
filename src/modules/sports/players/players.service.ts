@@ -158,6 +158,31 @@ export class PlayersService {
       'Player not found',
     );
   }
+
+  // =========================================================
+// PUBLIC
+// =========================================================
+
+async findByIdPublicOrThrow(
+  id: string,
+) {
+  return assertFound(
+    await this.playerRepo.findByIdPublic(id),
+    'Player not found',
+  );
+}
+
+async listForTeamPublic(
+  teamId: string,
+) {
+  if (!teamId) {
+    return [];
+  }
+
+  return this.playerRepo.findByTeamPublic(
+    teamId,
+  );
+}
 }
 
 
