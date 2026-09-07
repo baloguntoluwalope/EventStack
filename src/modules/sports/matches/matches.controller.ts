@@ -23,6 +23,7 @@ import { Audited } from '../../../common/decorators/audited.decorator';
 
 import { MatchesService } from './matches.service';
 import { TransitionMatchDto } from './dto/transition-match.dto';
+import { SetAddedTimeDto } from './dto/set-added-time.dto';
 
 @ApiTags('sports-matches')
 @ApiBearerAuth()
@@ -187,4 +188,34 @@ export class PublicMatchesController {
       tournamentId,
     );
   }
+
+  // =========================================================
+// ADDED TIME
+// =========================================================
+
+@Patch('matches/:id/added-time')
+@UseGuards(PermissionsGuard)
+@RequirePermission(
+  Permission.TOURNAMENT_MANAGE,
+)
+@Audited(
+  'Match',
+  'set_added_time',
+  ['currentAddedTime'],
+)
+@ApiOperation({
+  summary:
+    'Set added time for the current match period',
+})
+setAddedTime(
+  @Param('orgId') orgId: string,
+  @Param('id') id: string,
+  @Body() dto: SetAddedTimeDto,
+) {
+  return this.matchesService.setAddedTime(
+    id,
+    orgId,
+    dto.minutes,
+  );
+}
 }

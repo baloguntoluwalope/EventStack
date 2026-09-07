@@ -1,5 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument, Types } from 'mongoose';
+
 import { BaseEntity } from '../../../../common/base/base-entity.schema';
 
 export enum MatchStatus {
@@ -8,6 +9,7 @@ export enum MatchStatus {
   HALFTIME = 'halftime',
   EXTRA_TIME = 'extra_time',
   PENALTIES = 'penalties',
+  PAUSED = 'paused',
   FINISHED = 'finished',
   ABANDONED = 'abandoned',
 }
@@ -33,6 +35,10 @@ export enum MatchPeriod {
 
 @Schema({ timestamps: true })
 export class Match extends BaseEntity {
+  // =========================================================
+  // TENANCY
+  // =========================================================
+
   @Prop({
     type: Types.ObjectId,
     ref: 'Organization',
@@ -49,6 +55,10 @@ export class Match extends BaseEntity {
   })
   tournamentId: Types.ObjectId;
 
+  // =========================================================
+  // FIXTURE
+  // =========================================================
+
   @Prop({
     type: Types.ObjectId,
     ref: 'Fixture',
@@ -58,14 +68,9 @@ export class Match extends BaseEntity {
   })
   fixtureId: Types.ObjectId;
 
-  @Prop({
-    type: Object,
-    default: null,
-  })
-  penaltyResult: {
-    homeScore: number;
-    awayScore: number;
-  } | null;
+  // =========================================================
+  // TEAMS
+  // =========================================================
 
   @Prop({
     type: Types.ObjectId,
@@ -81,12 +86,20 @@ export class Match extends BaseEntity {
   })
   awayTeamId: Types.ObjectId;
 
+  // =========================================================
+  // MATCH STATUS
+  // =========================================================
+
   @Prop({
     type: String,
     enum: MatchStatus,
     default: MatchStatus.SCHEDULED,
   })
   status: MatchStatus;
+
+  // =========================================================
+  // FOOTBALL PERIOD
+  // =========================================================
 
   @Prop({
     type: String,
@@ -95,12 +108,40 @@ export class Match extends BaseEntity {
   })
   currentPeriod: MatchPeriod;
 
+  /**
+   * Added time belonging to the CURRENT period.
+   *
+   * Example:
+   *
+   * FIRST_HALF + 5
+   * SECOND_HALF + 5
+   * EXTRA_TIME_FIRST_HALF + 2
+   */
   @Prop({
     type: Number,
     default: 0,
   })
   currentAddedTime: number;
 
+  /**
+   * Legacy/display period field.
+   *
+   * Kept for compatibility with existing code.
+   */
+  @Prop({
+    type: String,
+  })
+  period: string;
+
+  // =========================================================
+  // PAUSE / RESUME
+  // =========================================================
+
+  /**
+   * Timestamp at which the match was suspended.
+   *
+   * Null whenever the match is not paused.
+   */
   @Prop({
     type: Date,
     default: null,
@@ -108,8 +149,34 @@ export class Match extends BaseEntity {
   pausedAt: Date | null;
 
   /**
-   * Placeholder fields — not mutated by anything in this phase.
-   * The next phase (Match Events) becomes the sole writer of these fields.
+   * Status that existed immediately before PAUSED.
+   *
+   * Examples:
+   *
+   * LIVE -> PAUSED
+   * pausedFromStatus = LIVE
+   *
+   * EXTRA_TIME -> PAUSED
+   * pausedFromStatus = EXTRA_TIME
+   *
+   * PENALTIES -> PAUSED
+   * pausedFromStatus = PENALTIES
+   */
+  @Prop({
+    type: String,
+    enum: MatchStatus,
+    default: null,
+  })
+  pausedFromStatus: MatchStatus | null;
+
+  // =========================================================
+  // SCORE
+  // =========================================================
+
+  /**
+   * Cached score.
+   *
+   * Match Events remain the source of truth.
    */
   @Prop({
     type: Number,
@@ -123,30 +190,71 @@ export class Match extends BaseEntity {
   })
   awayScore: number;
 
-  @Prop({
-    type: String,
-  })
-  period: string;
+  // =========================================================
+  // PENALTY SHOOTOUT RESULT
+  // =========================================================
 
   @Prop({
+    type: Object,
+    default: null,
+  })
+  penaltyResult: {
+    homeScore: number;
+    awayScore: number;
+  } | null;
+
+  // =========================================================
+  // TIMING
+  // =========================================================
+
+  /**
+   * Match start timestamp.
+   */
+  @Prop({
+    type: Date,
+    default: null,
+  })
+  startedAt: Date | null;
+
+  /**
+   * Start timestamp of the CURRENT football period.
+   *
+   * The pause/resume logic adjusts this timestamp so that
+   * suspended time is not counted by the frontend clock.
+   */
+  @Prop({
+    type: Date,
+    default: null,
+  })
+  periodStartedAt: Date | null;
+
+  /**
+   * Match end timestamp.
+   */
+  @Prop({
+    type: Date,
+    default: null,
+  })
+  endedAt: Date | null;
+
+  // =========================================================
+  // LEGACY ADDED TIME
+  // =========================================================
+
+  /**
+   * Kept for compatibility with existing code.
+   *
+   * New clock logic should use currentAddedTime.
+   */
+  @Prop({
     type: Number,
+    default: 0,
   })
   addedTime: number;
 
-  @Prop({
-    type: Date,
-  })
-  startedAt: Date;
-
-  @Prop({
-    type: Date,
-  })
-  periodStartedAt: Date;
-
-  @Prop({
-    type: Date,
-  })
-  endedAt: Date;
+  // =========================================================
+  // RESULT
+  // =========================================================
 
   @Prop({
     type: String,
@@ -156,6 +264,8 @@ export class Match extends BaseEntity {
   result: MatchResult | null;
 }
 
-export type MatchDocument = HydratedDocument<Match>;
+export type MatchDocument =
+  HydratedDocument<Match>;
 
-export const MatchSchema = SchemaFactory.createForClass(Match);
+export const MatchSchema =
+  SchemaFactory.createForClass(Match);

@@ -1,10 +1,11 @@
 import {
   IsEnum,
   IsMongoId,
-  IsNumber,
+  IsInt,
   IsObject,
   IsOptional,
   IsString,
+  Min,
 } from 'class-validator';
 
 import {
@@ -41,15 +42,17 @@ export class CreateMatchEventDto {
   @IsMongoId()
   secondaryPlayerId?: string;
 
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsNumber()
-  minute?: number;
+ @ApiPropertyOptional()
+@IsOptional()
+@IsInt()
+@Min(0)
+minute?: number;
 
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsNumber()
-  addedMinute?: number;
+@ApiPropertyOptional()
+@IsOptional()
+@IsInt()
+@Min(0)
+addedMinute?: number;
 
   @ApiPropertyOptional()
   @IsOptional()

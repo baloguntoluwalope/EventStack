@@ -456,6 +456,244 @@ async listPublicForTournament(
     return updated;
   }
 
+
+
+    // =========================================================
+  // PAUSE MATCH
+  // =========================================================
+
+  /**
+   * Suspends a currently running match.
+   *
+   * The current football period does NOT change.
+   *
+   * Example:
+   *
+   * LIVE
+   *  ↓
+   * PAUSED
+   *
+   * The original periodStartedAt is preserved temporarily.
+   * When resumed, it is shifted forward by the duration of
+   * the pause so the paused time is excluded from the clock.
+   */
+  async pause(
+    id: string,
+    organizationId: string,
+  ) {
+    const match =
+      await this.findByIdOrThrow(
+        id,
+        organizationId,
+      );
+
+    if (
+      match.status !== MatchStatus.LIVE &&
+      match.status !== MatchStatus.EXTRA_TIME &&
+      match.status !== MatchStatus.PENALTIES
+    ) {
+      throw new BadRequestException(
+        `Cannot pause match while it is "${match.status}".`,
+      );
+    }
+
+    if (match.pausedAt) {
+      throw new BadRequestException(
+        'Match is already paused.',
+      );
+    }
+
+    const now = new Date();
+
+    const updated =
+      await assertFound(
+        await this.matchRepo.updateById(
+          id,
+          {
+            status: MatchStatus.PAUSED,
+
+            pausedAt: now,
+
+            pausedFromStatus:
+              match.status,
+          },
+        ),
+        'Match not found',
+      );
+
+    // Notify Match Events / other listeners.
+    this.eventEmitter.emit(
+      'match.suspended',
+      {
+        matchId: id,
+
+        fixtureId:
+          match.fixtureId.toString(),
+
+        tournamentId:
+          match.tournamentId.toString(),
+
+        organizationId,
+
+        homeTeamId:
+          match.homeTeamId.toString(),
+
+        awayTeamId:
+          match.awayTeamId.toString(),
+
+        previousStatus:
+          match.status,
+
+        currentPeriod:
+          match.currentPeriod,
+
+        pausedAt: now,
+      },
+    );
+
+    return updated;
+  }
+
+  // =========================================================
+  // RESUME MATCH
+  // =========================================================
+
+  /**
+   * Resumes a suspended match.
+   *
+   * The time spent paused is removed from the football clock.
+   *
+   * Example:
+   *
+   * periodStartedAt = 10:00
+   * pausedAt        = 10:30
+   * resumedAt       = 10:40
+   *
+   * Pause duration = 10 minutes.
+   *
+   * New periodStartedAt:
+   *
+   * 10:00 + 10 minutes = 10:10
+   *
+   * Therefore the clock continues from 30:00 rather than
+   * jumping to 40:00.
+   */
+  async resume(
+    id: string,
+    organizationId: string,
+  ) {
+    const match =
+      await this.findByIdOrThrow(
+        id,
+        organizationId,
+      );
+
+    if (match.status !== MatchStatus.PAUSED) {
+      throw new BadRequestException(
+        'Match is not paused.',
+      );
+    }
+
+    if (!match.pausedAt) {
+      throw new BadRequestException(
+        'Paused match is missing pausedAt.',
+      );
+    }
+
+    if (!match.pausedFromStatus) {
+      throw new BadRequestException(
+        'Paused match is missing pausedFromStatus.',
+      );
+    }
+
+    const now = new Date();
+
+    const pausedAt =
+      new Date(match.pausedAt);
+
+    const pausedDuration =
+      now.getTime() - pausedAt.getTime();
+
+    if (pausedDuration < 0) {
+      throw new BadRequestException(
+        'Invalid pause timestamp.',
+      );
+    }
+
+    const originalPeriodStartedAt =
+      match.periodStartedAt
+        ? new Date(match.periodStartedAt)
+        : now;
+
+    /**
+     * Move periodStartedAt forward by the amount of time
+     * the match was paused.
+     *
+     * This makes the frontend clock ignore the suspension.
+     */
+    const adjustedPeriodStartedAt =
+      new Date(
+        originalPeriodStartedAt.getTime() +
+          pausedDuration,
+      );
+
+    const resumedStatus =
+      match.pausedFromStatus;
+
+    const updated =
+      await assertFound(
+        await this.matchRepo.updateById(
+          id,
+          {
+            status: resumedStatus,
+
+            periodStartedAt:
+              adjustedPeriodStartedAt,
+
+            pausedAt: null,
+
+            pausedFromStatus: null,
+          },
+        ),
+        'Match not found',
+      );
+
+    // Notify Match Events / other listeners.
+    this.eventEmitter.emit(
+      'match.resumed',
+      {
+        matchId: id,
+
+        fixtureId:
+          match.fixtureId.toString(),
+
+        tournamentId:
+          match.tournamentId.toString(),
+
+        organizationId,
+
+        homeTeamId:
+          match.homeTeamId.toString(),
+
+        awayTeamId:
+          match.awayTeamId.toString(),
+
+        resumedStatus,
+
+        currentPeriod:
+          match.currentPeriod,
+
+        pausedAt,
+
+        resumedAt: now,
+
+        pausedDurationMs:
+          pausedDuration,
+      },
+    );
+
+    return updated;
+  }
   // =========================================================
   // PENALTY RESULT
   // =========================================================
@@ -534,35 +772,33 @@ async listPublicForTournament(
   // =========================================================
 
   async setAddedTime(
-    id: string,
-    minutes: number,
+  id: string,
+  organizationId: string,
+  minutes: number,
+) {
+  if (
+    !Number.isInteger(minutes) ||
+    minutes < 0 ||
+    minutes > 30
   ) {
-    if (
-      !Number.isInteger(minutes) ||
-      minutes < 0 ||
-      minutes > 30
-    ) {
-      throw new BadRequestException(
-        'Added time must be an integer between 0 and 30 minutes.',
-      );
-    }
-
-    const match =
-      await this.matchRepo.findById(id);
-
-    if (!match) {
-      throw new BadRequestException(
-        'Match not found.',
-      );
-    }
-
-    return this.matchRepo.updateById(
-      id,
-      {
-        currentAddedTime: minutes,
-      },
+    throw new BadRequestException(
+      'Added time must be an integer between 0 and 30 minutes.',
     );
   }
+
+  const match =
+    await this.findByIdOrThrow(
+      id,
+      organizationId,
+    );
+
+  return this.matchRepo.updateById(
+    id,
+    {
+      currentAddedTime: minutes,
+    },
+  );
+}
 
   // =========================================================
   // SCORE
@@ -641,4 +877,6 @@ async listPublicForTournament(
         normalEndMinute + addedTime,
     };
   }
+
+  
 }

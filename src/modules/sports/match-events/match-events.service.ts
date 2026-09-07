@@ -11,19 +11,35 @@ import { PlayersService } from '../players/players.service';
 import {  SCORING_EVENT_TYPES,  PERIOD_EFFECTS,  PERIOD_EVENT_PRECONDITIONS,} from './match-event-effects';
 
 const TEAM_REQUIRED_TYPES: MatchEventType[] = [
+  // Scoring
   MatchEventType.GOAL,
   MatchEventType.OWN_GOAL,
   MatchEventType.DISALLOWED_GOAL,
+
+  // Match actions
   MatchEventType.OFFSIDE,
+  MatchEventType.FOUL,
+  MatchEventType.FREE_KICK,
+  MatchEventType.CORNER,
+  MatchEventType.GOAL_KICK,
+  MatchEventType.THROW_IN,
+
+  // Cards
   MatchEventType.YELLOW_CARD,
   MatchEventType.SECOND_YELLOW,
   MatchEventType.RED_CARD,
+
+  // Players
   MatchEventType.SUBSTITUTION,
   MatchEventType.INJURY,
+
+  // Penalties
   MatchEventType.PENALTY_AWARDED,
   MatchEventType.PENALTY_SCORED,
   MatchEventType.PENALTY_MISSED,
   MatchEventType.PENALTY_SAVED,
+
+  // Shootout
   MatchEventType.PENALTY_SHOOTOUT_KICK,
 ];
 
@@ -361,19 +377,19 @@ export class MatchEventsService {
       // =====================================================
       // ADDED TIME
       // =====================================================
-      if (
-        dto.type ===
-          MatchEventType.ADDED_TIME_ANNOUNCED &&
-        dto.metadata?.addedMinutes !=
-          null
-      ) {
-        await this.matchesService.setAddedTime(
-          matchId,
-          Number(
-            dto.metadata.addedMinutes,
-          ),
-        );
-      }
+   if (dto.type === MatchEventType.ADDED_TIME_ANNOUNCED) {
+  const addedMinutes = dto.metadata?.addedMinutes;
+
+  if (
+    !Number.isInteger(Number(addedMinutes)) ||
+    Number(addedMinutes) < 0 ||
+    Number(addedMinutes) > 30
+  ) {
+    throw new BadRequestException(
+      'addedMinutes must be an integer between 0 and 30.',
+    );
+  }
+}
 
       // =====================================================
       // PENALTY SHOOTOUT
