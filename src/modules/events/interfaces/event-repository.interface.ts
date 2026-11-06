@@ -22,6 +22,14 @@ export interface IEventRepository {
     organizationId: string,
   ): Promise<EventDocument | null>;
 
+  findDeletedForTenant(
+    organizationId: string,
+  ): Promise<EventDocument[]>;
+
+  findArchivedForTenant(
+    organizationId: string,
+  ): Promise<EventDocument[]>;
+
   findManyForTenant(
     organizationId: string,
     options?: {
@@ -33,6 +41,16 @@ export interface IEventRepository {
   updateById(
     id: string,
     data: Partial<EventDocument>,
+  ): Promise<EventDocument | null>;
+
+  unarchive(
+    id: string,
+    organizationId: string,
+  ): Promise<EventDocument | null>;
+
+  restore(
+    id: string,
+    organizationId: string,
   ): Promise<EventDocument | null>;
 
   deleteByIdForTenant(

@@ -9,11 +9,13 @@ import { MembersController } from './members.controller';
 import { TenantContextGuard } from './guards/tenant-context.guard';
 import { EmailModule } from '../../identity/email/email.module';
 import { OrganizationsModule } from '../organizations/organizations.module';
+import { UsersModule } from '../../identity/users/users.module';
 
 @Module({
   imports: [
     MongooseModule.forFeature([{ name: Membership.name, schema: MembershipSchema }]),
     EmailModule,
+    UsersModule,
     forwardRef(() => OrganizationsModule),
     JwtModule.register({}),
   ],

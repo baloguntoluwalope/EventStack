@@ -4,4 +4,6 @@ export enum Permission {
   BILLING_MANAGE = 'billing:manage',
   TOURNAMENT_MANAGE = 'tournament:manage',
     MATCH_EVENT_CREATE = 'match_event:create',
+      FORM_MANAGE = 'form:manage',
+        TASK_ASSIGN = 'task:assign',
 }

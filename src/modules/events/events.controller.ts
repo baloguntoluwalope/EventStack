@@ -344,6 +344,59 @@ export class EventsController {
       );
   }
 
+
+  // =========================================================
+// UNARCHIVE
+// =========================================================
+
+@ApiBearerAuth()
+@UseGuards(
+  JwtAuthGuard,
+  TenantContextGuard,
+  PermissionsGuard,
+)
+@RequirePermission(
+  Permission.EVENT_EDIT,
+)
+@Patch(
+  'organizations/:orgId/events/:id/unarchive',
+)
+unarchive(
+  @Param('orgId') orgId: string,
+  @Param('id') id: string,
+) {
+  return this.eventsService.unarchive(
+    id,
+    orgId,
+  );
+}
+
+
+// =========================================================
+// RESTORE
+// =========================================================
+
+@ApiBearerAuth()
+@UseGuards(
+  JwtAuthGuard,
+  TenantContextGuard,
+  PermissionsGuard,
+)
+@RequirePermission(
+  Permission.EVENT_EDIT,
+)
+@Patch(
+  'organizations/:orgId/events/:id/restore',
+)
+restore(
+  @Param('orgId') orgId: string,
+  @Param('id') id: string,
+) {
+  return this.eventsService.restore(
+    id,
+    orgId,
+  );
+}
   // =========================================================
   // DUPLICATE
   // =========================================================

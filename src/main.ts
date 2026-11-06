@@ -14,7 +14,9 @@ async function bootstrap() {
     console.warn(`[startup] Missing required environment variables: ${missingEnvKeys.join(', ')}`);
   }
 
-  const app = await NestFactory.create(AppModule, { bufferLogs: true });
+
+  
+  const app = await NestFactory.create(AppModule, { bufferLogs: true, rawBody: true });
   app.useLogger(app.get(Logger));
 
   // Enable graceful shutdown to release ports cleanly on process signals

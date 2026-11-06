@@ -28,6 +28,7 @@ import { FixturesModule } from '../fixtures/fixtures.module';
 import { GroupsModule } from '../groups/groups.module';
 import { StandingsModule } from '../standings/standings.module';
 import { MembersModule } from '../../tenancy/members/members.module';
+import {TeamsModule} from '../teams/teams.module';
 
 @Module({
   imports: [
@@ -39,6 +40,7 @@ import { MembersModule } from '../../tenancy/members/members.module';
     GroupsModule,
     StandingsModule,
     MembersModule,
+    TeamsModule,
   ],
 
   providers: [
@@ -57,7 +59,8 @@ import { MembersModule } from '../../tenancy/members/members.module';
 
   exports: [
     KnockoutService,
-    KNOCKOUT_MATCH_REPOSITORY, // <-- ADD THIS
+    KNOCKOUT_STAGE_REPOSITORY,
+    KNOCKOUT_MATCH_REPOSITORY,
   ],
 })
 export class KnockoutModule {}

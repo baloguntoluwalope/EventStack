@@ -31,11 +31,22 @@ export class MongooseMembershipRepository
       .exec();
   }
 
-async softDeleteManyByOrg(organizationId: string): Promise<void> {
-  await this.model.updateMany(
-    { organizationId: new Types.ObjectId(organizationId), deletedAt: null },
-    { deletedAt: new Date() },
-  ).exec();
-}
-  
+  findByOrgAndInvitedEmail(organizationId: string, email: string) {
+    return this.model
+      .findOne({
+        organizationId: new Types.ObjectId(organizationId),
+        invitedEmail: email,
+        deletedAt: null,
+      })
+      .exec();
+  }
+
+  async softDeleteManyByOrg(organizationId: string): Promise<void> {
+    await this.model
+      .updateMany(
+        { organizationId: new Types.ObjectId(organizationId), deletedAt: null },
+        { deletedAt: new Date() },
+      )
+      .exec();
+  }
 }

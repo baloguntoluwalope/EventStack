@@ -67,4 +67,6 @@ export class SectionsController {
     // ✅ FIX: Pass `eventId` here as well if remove() accepts it
     return this.sectionsService.remove(orgId, eventId, id);
   }
+
+  
 }

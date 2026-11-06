@@ -12,12 +12,26 @@ export class BrevoEmailProvider implements IEmailProvider {
   private readonly senderName: string;
 
   constructor(private readonly config: ConfigService) {
-    const apiKey = this.config.get<string>('BREVO_API_KEY') || '';
-    this.senderEmail = this.config.get<string>('SENDER_EMAIL') || '';
-    this.senderName = this.config.get<string>('SENDER_NAME') || 'EventStack';
+    const apiKey =
+      this.config.get<string>('email.brevoApiKey') ||
+      this.config.get<string>('BREVO_API_KEY') ||
+      '';
 
-    if (!apiKey) {
-      this.logger.warn('BREVO_API_KEY is not set — emails will fail to send.');
+    this.senderEmail =
+      this.config.get<string>('email.senderEmail') ||
+      this.config.get<string>('SENDER_EMAIL') ||
+      this.config.get<string>('EMAIL_SENDER_ADDRESS') ||
+      '';
+
+    this.senderName =
+      this.config.get<string>('email.senderName') ||
+      this.config.get<string>('SENDER_NAME') ||
+      'EventStack';
+
+    if (!apiKey || !this.senderEmail) {
+      this.logger.warn(
+        'Brevo email config is incomplete — set email.brevoApiKey and email.senderEmail (or the legacy BREVO_API_KEY / EMAIL_SENDER_ADDRESS env vars).',
+      );
     }
 
     // Initialize the unified Brevo client

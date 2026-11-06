@@ -9,6 +9,8 @@ export interface IMembershipRepository {
   updateById(id: string, data: Partial<MembershipDocument>): Promise<MembershipDocument | null>;
   deleteById(id: string): Promise<boolean>;
    softDeleteManyByOrg(organizationId: string): Promise<void>;
+     findById(id: string): Promise<MembershipDocument | null>;
+  findByOrgAndInvitedEmail(organizationId: string, email: string): Promise<MembershipDocument | null>;
 }
 
 export const MEMBERSHIP_REPOSITORY = 'MEMBERSHIP_REPOSITORY';

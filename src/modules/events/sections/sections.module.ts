@@ -39,6 +39,8 @@ import {
 import {
   PagesModule,
 } from '../pages/pages.module';
+import { TemplatesModule } from '../templates/templates.module';
+import { TemplateUpdatesController } from './template-updates.controller';
 
 @Module({
   imports: [
@@ -48,6 +50,10 @@ import {
 
     forwardRef(
       () => PagesModule,
+    ),
+
+    forwardRef(
+      () => TemplatesModule,
     ),
 
     MembersModule,
@@ -62,6 +68,7 @@ import {
 
   controllers: [
     SectionsController,
+    TemplateUpdatesController,
   ],
 
   providers: [

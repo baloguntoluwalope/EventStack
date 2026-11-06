@@ -131,6 +131,137 @@ export class MongooseEventRepository
       .exec();
   }
 
+  async findArchivedForTenant(
+     organizationId: string
+    ): Promise<EventDocument[]> {
+    if(!Types.ObjectId.isValid(organizationId)){
+      return [];
+    }
+
+    return this.model
+     .find({
+      organizationId: new Types.ObjectId(organizationId),
+      status: EventStatus.ARCHIVED,
+      deletedAt: null,
+     })
+     .sort({
+       updatedAt: -1,
+     })
+     .exec();
+
+  }
+  
+  /**
+ * Remove an event from the archived state.
+ */
+async unarchive(
+  id: string,
+  organizationId: string,
+): Promise<EventDocument | null> {
+  if (
+    !Types.ObjectId.isValid(id) ||
+    !Types.ObjectId.isValid(organizationId)
+  ) {
+    return null;
+  }
+
+  return this.model
+    .findOneAndUpdate(
+      {
+        _id: new Types.ObjectId(id),
+        organizationId: new Types.ObjectId(organizationId),
+        // Must currently be archived.
+        status: EventStatus.ARCHIVED,
+        // Deleted events cannot be unarchived.
+        deletedAt: null,
+      },
+      {
+        $set: {
+          // Unarchive to draft rather than implicitly republishing.
+          status: EventStatus.DRAFT,
+        },
+      },
+      {
+        new: true,
+      },
+    )
+    .exec();
+}
+
+/**
+ * =========================================================
+ * DELETED / TRASH EVENTS
+ * =========================================================
+ */
+
+/**
+ * Returns all soft-deleted events for an organization.
+ */
+async findDeletedForTenant(
+  organizationId: string,
+): Promise<EventDocument[]> {
+  if (!Types.ObjectId.isValid(organizationId)) {
+    return [];
+  }
+
+  return this.model
+    .find({
+      organizationId: new Types.ObjectId(organizationId),
+      deletedAt: {
+        $ne: null,
+      },
+    })
+    .sort({
+      deletedAt: -1,
+    })
+    .exec();
+}
+
+/**
+ * Restore a soft-deleted event.
+ *
+ * This does NOT create a new event.
+ * It simply removes the deletedAt marker.
+ */
+async restore(
+  id: string,
+  organizationId?: string,
+): Promise<EventDocument | null> {
+  if (!Types.ObjectId.isValid(id)) {
+    return null;
+  }
+
+  const filter: any = {
+    _id: new Types.ObjectId(id),
+    // Only deleted events can be restored.
+    deletedAt: {
+      $ne: null,
+    },
+  };
+
+  if (organizationId) {
+    if (!Types.ObjectId.isValid(organizationId)) {
+      return null;
+    }
+
+    filter.organizationId = new Types.ObjectId(organizationId);
+  }
+
+  return this.model
+    .findOneAndUpdate(
+      filter,
+      {
+        $set: {
+          deletedAt: null,
+        },
+      },
+      {
+        new: true,
+      },
+    )
+    .exec();
+}
+
   /**
    * Explicit tenant lookup.
    *

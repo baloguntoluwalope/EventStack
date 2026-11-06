@@ -429,7 +429,7 @@ async listPublicForTournament(
     // -------------------------------------------------------
 
     if (targetStatus === MatchStatus.FINISHED) {
-      this.eventEmitter.emit(
+      await this.eventEmitter.emitAsync(
         'match.finished',
         {
           matchId: id,

@@ -2,28 +2,24 @@ import {
   Injectable,
   Inject,
   BadRequestException,
-  UnauthorizedException,
+  ConflictException,
+  ForbiddenException,
   Logger,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { Types } from 'mongoose';
-
-// Use 'import type' for interfaces used in decorated signatures
+import { UsersService } from '../../identity/users/users.service';
+import { renderInvitationEmail } from '../../identity/email/templates/invitation-email.template';
+import { assertDeleted, assertFound } from '../../../common/utils/assert-found.util';
+import { EMAIL_PROVIDER, IEmailProvider } from '../../../common/providers/email-provider.interface';
+import { Role } from '../../../common/constants/roles.constants';
 import type { IMembershipRepository } from './interfaces/membership-repository.interface';
 import { MEMBERSHIP_REPOSITORY } from './interfaces/membership-repository.interface';
-
-import type { IEmailProvider } from '../../../common/providers/email-provider.interface';
-import { EMAIL_PROVIDER } from '../../../common/providers/email-provider.interface';
-
-import { OrganizationsService } from '../organizations/organizations.service';
 import { InviteMemberDto } from './dto/invite-member.dto';
 import { MembershipStatus } from './schemas/membership.schema';
-import { Role } from '../../../common/constants/roles.constants'; // <-- Directly import Role from roles.constants
-import { assertFound, assertDeleted } from '../../../common/utils/assert-found.util';
-
-// Relative path import to maintain consistent TS module resolution
-import { renderInvitationEmail } from '../../identity/email/templates/invitation-email.template';
+import { OrganizationsService } from '../organizations/organizations.service';
 
 interface InviteJwtPayload {
   membershipId: string;
@@ -35,17 +31,17 @@ export class MembersService {
   private readonly logger = new Logger(MembersService.name);
 
   constructor(
-    @Inject(MEMBERSHIP_REPOSITORY) private readonly membershipRepo: IMembershipRepository,
-    @Inject(EMAIL_PROVIDER) private readonly emailProvider: IEmailProvider,
+    @Inject(MEMBERSHIP_REPOSITORY)
+    private readonly membershipRepo: IMembershipRepository,
+    @Inject(EMAIL_PROVIDER)
+    private readonly emailProvider: IEmailProvider,
     private readonly orgService: OrganizationsService,
     private readonly jwtService: JwtService,
     private readonly config: ConfigService,
+    private readonly usersService: UsersService,
   ) {}
 
-  /**
-   * Used only when an organization is created — the creator becomes Owner
-   * immediately, with no invitation/accept step.
-   */
+  /** Called when an organization is created so its creator becomes Owner. */
   createOwnerMembership(organizationId: string, userId: string) {
     return this.membershipRepo.create({
       organizationId: new Types.ObjectId(organizationId),
@@ -57,10 +53,19 @@ export class MembersService {
 
   async invite(organizationId: string, invitedBy: string, dto: InviteMemberDto) {
     const org = await this.orgService.findByIdOrThrow(organizationId);
+    const email = dto.email.trim().toLowerCase();
+    const existing = await this.membershipRepo.findByOrgAndInvitedEmail(organizationId, email);
+
+    if (existing) {
+      if (existing.status === MembershipStatus.ACCEPTED) {
+        throw new ConflictException('This person is already a member.');
+      }
+      await this.membershipRepo.deleteById(existing.id);
+    }
 
     const membership = await this.membershipRepo.create({
-      organizationId: new Types.ObjectId(org.id),
-      invitedEmail: dto.email,
+      organizationId: new Types.ObjectId(organizationId),
+      invitedEmail: email,
       role: dto.role,
       invitedBy: new Types.ObjectId(invitedBy),
       status: MembershipStatus.PENDING,
@@ -77,15 +82,14 @@ export class MembersService {
     try {
       const appUrl = this.config.get<string>('appUrl', 'https://eventstack.pxxl.run');
       const acceptUrl = `${appUrl}/invitations/${inviteToken}/accept`;
-
       await this.emailProvider.send(
-        dto.email,
+        email,
         `You've been invited to ${org.name} on EventStack`,
         renderInvitationEmail(org.name, acceptUrl, appUrl),
       );
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-      this.logger.error(`Failed to send invitation email to ${dto.email}: ${errorMessage}`);
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      this.logger.error(`Failed to send invitation email to ${email}: ${message}`);
     }
 
     return membership;
@@ -93,7 +97,6 @@ export class MembersService {
 
   async acceptInvite(token: string, userId: string) {
     let payload: InviteJwtPayload;
-
     try {
       payload = this.jwtService.verify<InviteJwtPayload>(token, {
         secret: this.config.get<string>('jwt.accessSecret'),
@@ -106,16 +109,39 @@ export class MembersService {
       throw new BadRequestException('Invalid token purpose');
     }
 
+    const membership = await assertFound(
+      await this.membershipRepo.findById(payload.membershipId),
+      'Invitation no longer exists',
+    );
+    if (membership.status === MembershipStatus.ACCEPTED) {
+      throw new ConflictException('This invitation has already been accepted.');
+    }
+
+    const user = await assertFound(await this.usersService.findById(userId), 'User not found');
+    if (!user.emailVerified) {
+      throw new ForbiddenException('Verify your email address before accepting an invitation.');
+    }
+    if (membership.invitedEmail && user.email.toLowerCase() !== membership.invitedEmail.toLowerCase()) {
+      throw new ForbiddenException('This invitation was sent to a different email address.');
+    }
+
+    const existingMembership = await this.membershipRepo.findByOrgAndUser(
+      membership.organizationId.toString(),
+      userId,
+    );
+    if (existingMembership) {
+      throw new ConflictException('You are already a member of this organization.');
+    }
+
     return assertFound(
-      await this.membershipRepo.updateById(payload.membershipId, {
-        userId: new Types.ObjectId(userId) as any,
+      await this.membershipRepo.updateById(membership.id, {
+        userId: new Types.ObjectId(userId),
         status: MembershipStatus.ACCEPTED,
       }),
       'Invitation no longer exists',
     );
   }
 
-  /** Used by TenantContextGuard on every tenant-scoped request. */
   findByOrgAndUser(organizationId: string, userId: string) {
     return this.membershipRepo.findByOrgAndUser(organizationId, userId);
   }
@@ -124,14 +150,28 @@ export class MembersService {
     return this.membershipRepo.findManyForTenant(organizationId);
   }
 
-  async changeRole(organizationId: string, membershipId: string, role: string) {
+  async changeRole(organizationId: string, membershipId: string, role: Role) {
+    const membership = await assertFound(
+      await this.membershipRepo.findByIdForTenant(membershipId, organizationId),
+      'Membership not found',
+    );
+    if (membership.role === Role.OWNER) {
+      throw new ForbiddenException("An owner's role can't be changed here.");
+    }
     return assertFound(
-      await this.membershipRepo.updateById(membershipId, { role } as any),
+      await this.membershipRepo.updateById(membershipId, { role }),
       'Membership not found',
     );
   }
 
-  async remove(membershipId: string) {
+  async remove(organizationId: string, membershipId: string) {
+    const membership = await assertFound(
+      await this.membershipRepo.findByIdForTenant(membershipId, organizationId),
+      'Membership not found',
+    );
+    if (membership.role === Role.OWNER) {
+      throw new ForbiddenException("An owner can't be removed.");
+    }
     return assertDeleted(
       await this.membershipRepo.deleteById(membershipId),
       'Membership not found',

@@ -27,6 +27,10 @@ export interface ISectionRepository {
     organizationId: string,
   ): Promise<SectionDocument[]>;
 
+  findMany(
+    filter: Record<string, any>,
+  ): Promise<SectionDocument[]>;
+
   updateById(
     id: string,
     data: Record<string, any>,

@@ -44,7 +44,9 @@ import { TournamentsModule } from './modules/sports/tournaments/tournaments.modu
 import { TeamsModule } from './modules/sports/teams/teams.module';
 import { FixturesModule } from './modules/sports/fixtures/fixtures.module';
 import {SportsModule} from './modules/sports/sports.module'
-
+import { FormsModule } from './modules/forms/forms.module';
+import { PaymentsModule } from './modules/payments/payments.module';
+import {TasksModule} from './modules/tasks/tasks.module'
 
 
 @Module({
@@ -97,8 +99,9 @@ import {SportsModule} from './modules/sports/sports.module'
     TeamsModule,
     FixturesModule,
     SportsModule,
-
-    
+    FormsModule,
+    PaymentsModule,
+    TasksModule,
   ],
   controllers: [AppController],
   providers: [

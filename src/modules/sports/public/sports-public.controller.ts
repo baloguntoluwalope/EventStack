@@ -10,6 +10,8 @@ import {
 import {
   ApiTags,
   ApiOperation,
+  ApiParam,
+  ApiOkResponse,
 } from '@nestjs/swagger';
 
 import {
@@ -44,6 +46,7 @@ import {
 
 import {
   KnockoutService,
+  PublicBracket,
 } from '../knockout/knockout.service';
 
 import {
@@ -179,22 +182,42 @@ export class SportsPublicController {
   }
 
   // =========================================================
+// PUBLIC KNOCKOUT ENDPOINT
+//
+// Replace the existing getKnockout() method in your public
+// controller with this one. Add the Swagger imports and the
+// PublicBracket import (adjust the path) at the top of the file:
+//
+//   import { ApiOkResponse, ApiOperation, ApiParam } from '@nestjs/swagger';
+//   import { PublicBracket } from '../knockout/knockout.service';
+// =========================================================
+
+  // =========================================================
   // KNOCKOUT
   // =========================================================
 
   @Get('tournaments/:id/knockout')
   @ApiOperation({
-    summary: 'Public knockout stage structure',
+    summary: 'Public knockout bracket',
+    description:
+      'The knockout bracket grouped by stage, in playing order. Team names are resolved, and slots ' +
+      'that are still waiting show a label such as "Winner of Semi-final 1". `hasBracket` is false ' +
+      'until the knockout has been generated. Internal ids (organization, tournament) are not exposed.',
   })
-  async getKnockout(
-    @Param('id') id: string,
-  ) {
+  @ApiParam({ name: 'id', description: 'Tournament ID' })
+  @ApiOkResponse({
+    description:
+      '{ tournamentId, hasBracket, currentStage, completed, stages: [{ stage, label, order, status, ' +
+      'matches: [{ id, position, status, fixtureId, home, away, winnerGoesTo }] }] }',
+  })
+  async getKnockout(@Param('id') id: string): Promise<PublicBracket> {
+    // Throws 404 if the tournament does not exist or is not public.
     const tournament =
-      await this.tournamentsService.findByIdPublicOrThrow(
-        id,
-      );
+      await this.tournamentsService.findByIdPublicOrThrow(id);
 
-    return this.knockoutService.listForTournament(
+    // The organization comes from the tournament record, never from the
+    // request, so a caller cannot read another tenant's bracket.
+    return this.knockoutService.getPublicBracket(
       id,
       tournament.organizationId.toString(),
     );

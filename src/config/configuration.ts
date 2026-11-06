@@ -43,8 +43,12 @@ rateLimit: {
   email: {
     provider: process.env.EMAIL_PROVIDER || 'brevo',
     brevoApiKey: process.env.BREVO_API_KEY,
-    senderEmail: process.env.EMAIL_SENDER_ADDRESS || 'no-reply@eventstack.app',
-    senderName: process.env.EMAIL_SENDER_NAME || 'EventStack',
+    senderEmail:
+      process.env.EMAIL_SENDER_ADDRESS ||
+      process.env.SENDER_EMAIL ||
+      'no-reply@eventstack.app',
+    senderName:
+      process.env.EMAIL_SENDER_NAME || process.env.SENDER_NAME || 'EventStack',
   },
 
   storage: {
@@ -56,7 +60,17 @@ rateLimit: {
     },
   },
 
-  payment: {
-    provider: process.env.PAYMENT_PROVIDER || 'none',
+    payment: {
+    provider: process.env.PAYMENT_PROVIDER || 'stub',
+    paystack: {
+      secretKey: process.env.PAYSTACK_SECRET_KEY,
+      baseUrl: process.env.PAYSTACK_BASE_URL || 'https://api.paystack.co',
+    },
+    bachs: {
+      apiKey: process.env.BACHS_API_KEY,
+      webhookSecret: process.env.BACHS_WEBHOOK_SECRET,
+      environment: process.env.BACHS_ENVIRONMENT || 'sandbox',
+      allowLive: process.env.BACHS_ALLOW_LIVE === 'true',
+    },
   },
 });

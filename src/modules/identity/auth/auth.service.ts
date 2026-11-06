@@ -142,7 +142,7 @@ export class AuthService {
       { sub: userId, platformAdmin },
       {
         secret: this.config.get<string>('jwt.accessSecret') ?? 'default_access_secret',
-        expiresIn: (this.config.get<string>('jwt.accessExpiry') ?? '15m') as JwtSignOptions['expiresIn'],
+        expiresIn: (this.config.get<string>('jwt.accessExpiry') ?? '30m') as JwtSignOptions['expiresIn'],
       },
     );
 
